@@ -1,0 +1,2428 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام المراسلات الإلكتروني - مكتب المالية بمحافظة تعز</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Cairo) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 left-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center space-x-3 space-x-reverse border border-slate-700">
+        <i id="toast-icon" class="fas fa-info-circle text-amber-400 text-lg"></i>
+        <span id="toast-message" class="text-sm font-semibold"></span>
+    </div>
+
+    <!-- Password Prompt Modal for Settings -->
+    <div id="settings-lock-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-100 p-6">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-3 border border-amber-200">
+                    <i class="fas fa-lock text-amber-600 text-2xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-900">منطقة محمية</h3>
+                <p class="text-slate-500 text-sm mt-1">يرجى إدخال كلمة مرور النظام للوصول إلى الإعدادات</p>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">كلمة مرور النظام</label>
+                    <input type="password" id="sys-lock-input" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-center tracking-widest text-lg" placeholder="••••••••">
+                </div>
+                <div class="flex space-x-2 space-x-reverse pt-2">
+                    <button onclick="verifySettingsPassword()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl transition duration-200">دخول</button>
+                    <button onclick="closeSettingsLockModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-xl transition duration-200">إلغاء</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CHANGE OWN PASSWORD -->
+    <div id="modal-change-password" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-100 p-6">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-3 border border-indigo-200">
+                    <i class="fas fa-key text-indigo-600 text-2xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-900">تغيير كلمة المرور الخاصة بك</h3>
+                <p class="text-slate-500 text-sm mt-1">يرجى إدخال كلمة المرور الجديدة وتأكيدها لحماية حسابك</p>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">كلمة المرور الحالية</label>
+                    <input type="password" id="change-pass-current" class="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="••••••••">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">كلمة المرور الجديدة</label>
+                    <input type="password" id="change-pass-new" class="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="••••••••">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">تأكيد كلمة المرور الجديدة</label>
+                    <input type="password" id="change-pass-confirm" class="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="••••••••">
+                </div>
+                <div class="flex space-x-2 space-x-reverse pt-2">
+                    <button onclick="submitChangePassword()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl transition duration-200">تحديث كلمة المرور</button>
+                    <button onclick="closeChangePasswordModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-xl transition duration-200">إلغاء</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- APP MAIN CONTAINER -->
+    <div id="app" class="flex-grow flex flex-col">
+        
+        <!-- LOGIN SCREEN -->
+        <div id="login-screen" class="flex-grow flex items-center justify-center p-4 bg-gradient-to-tr from-slate-900 via-indigo-950 to-slate-900">
+            <div class="bg-white/95 backdrop-blur-md w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-white/20 p-8 sm:p-12">
+                <div class="text-center mb-8">
+                    <div class="flex justify-center mb-4">
+                        <div class="p-4 bg-indigo-50 rounded-2xl border border-indigo-100" id="login-logo-container">
+                            <i class="fas fa-balance-scale text-indigo-900 text-4xl" id="login-logo-icon"></i>
+                        </div>
+                    </div>
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight" id="login-sys-name">نظام المراسلات الإلكتروني</h1>
+                    <p class="text-indigo-600 font-bold text-sm mt-1">مكتب المالية - محافظة تعز</p>
+                    <div class="h-1 w-20 bg-indigo-600 mx-auto rounded-full mt-4"></div>
+                </div>
+
+                <form onsubmit="handleLogin(event)" class="space-y-6">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">اسم المستخدم</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
+                                <i class="fas fa-user-circle"></i>
+                            </span>
+                            <input type="text" id="login-username" required class="w-full pr-10 pl-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50" placeholder="مثال: admin أو taiz_finance">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">كلمة المرور</label>
+                            <span class="text-xs text-indigo-600 font-semibold cursor-pointer" onclick="showForgetPasswordHelp()">نسيت كلمة المرور؟</span>
+                        </div>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
+                                <i class="fas fa-lock"></i>
+                            </span>
+                            <input type="password" id="login-password" required class="w-full pr-10 pl-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50" placeholder="••••••••">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full py-4 bg-indigo-900 hover:bg-indigo-950 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition duration-300 flex items-center justify-center space-x-2 space-x-reverse text-lg">
+                        <span>تسجيل الدخول</span>
+                        <i class="fas fa-sign-in-alt"></i>
+                    </button>
+                </form>
+
+                <div class="mt-8 pt-6 border-t border-slate-100 text-center">
+                    <p class="text-xs text-slate-400">حسابات تجريبية للمعاينة:</p>
+                    <div class="flex flex-wrap gap-2 justify-center mt-2 text-xs">
+                        <span class="px-2 py-1 bg-slate-100 rounded text-slate-600">المركز الرئيسي: <strong class="text-slate-800">admin</strong> / <strong class="text-slate-800">123456</strong></span>
+                        <span class="px-2 py-1 bg-slate-100 rounded text-slate-600">فرع القاهرة: <strong class="text-slate-800">alqahera</strong> / <strong class="text-slate-800">123456</strong></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN DASHBOARD SCREEN (Hidden by default, shown upon auth) -->
+        <div id="dashboard-screen" class="hidden flex-grow flex flex-col md:flex-row min-h-screen">
+            
+            <!-- Sidebar (Responsive & Elegant) -->
+            <aside class="w-full md:w-80 bg-slate-900 text-slate-300 flex flex-col border-l border-slate-800 shrink-0 shadow-xl">
+                <!-- Sidebar Header with Brand -->
+                <div class="p-6 border-b border-slate-800 flex items-center space-x-3 space-x-reverse bg-slate-950">
+                    <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg shrink-0 overflow-hidden border border-slate-700" id="sidebar-logo-container">
+                        <i class="fas fa-balance-scale text-indigo-900 text-2xl" id="sidebar-logo-icon"></i>
+                    </div>
+                    <div class="overflow-hidden">
+                        <h2 class="font-extrabold text-white text-base truncate" id="sidebar-sys-name">مكتب المالية - تعز</h2>
+                        <span class="text-xs text-amber-400 font-semibold" id="user-role-badge">لوحة التحكم</span>
+                    </div>
+                </div>
+
+                <!-- Logged User Card -->
+                <div class="p-5 border-b border-slate-800/60 bg-slate-900/40 flex items-center justify-between">
+                    <div class="flex items-center space-x-4 space-x-reverse overflow-hidden">
+                        <div class="relative shrink-0">
+                            <img id="user-avatar" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150" alt="صورة المستخدم" class="w-12 h-12 rounded-full object-cover border-2 border-slate-700">
+                            <span class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-slate-900 rounded-full"></span>
+                        </div>
+                        <div class="overflow-hidden">
+                            <h4 id="user-full-name" class="font-bold text-white text-sm truncate">...</h4>
+                            <p id="user-title" class="text-xs text-slate-400 truncate">...</p>
+                        </div>
+                    </div>
+                    <!-- Key icon to change password -->
+                    <button onclick="openChangePasswordModal()" title="تغيير كلمة المرور الخاصة بك" class="p-2 bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 rounded-xl transition mr-2 shrink-0">
+                        <i class="fas fa-key"></i>
+                    </button>
+                </div>
+
+                <!-- Navigation Links -->
+                <nav class="flex-grow p-4 space-y-1 overflow-y-auto">
+                    <!-- Dashboard Home -->
+                    <button onclick="switchTab('overview')" id="nav-overview" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition font-semibold text-sm hover:bg-slate-800 hover:text-white bg-slate-800 text-white">
+                        <i class="fas fa-chart-pie text-lg w-6"></i>
+                        <span>الرئيسية والإحصائيات</span>
+                    </button>
+
+                    <!-- Document Repository & Correspondence -->
+                    <button onclick="switchTab('documents')" id="nav-documents" class="w-full flex items-center justify-between px-4 py-3 rounded-xl transition font-semibold text-sm hover:bg-slate-800 hover:text-white text-slate-400">
+                        <div class="flex items-center space-x-3 space-x-reverse">
+                            <i class="fas fa-folder-open text-lg w-6"></i>
+                            <span>المراسلات والوثائق</span>
+                        </div>
+                        <span id="unread-docs-count" class="bg-indigo-600 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+                    </button>
+
+                    <!-- Dynamic Forms (نماذج استقصائية) -->
+                    <button onclick="switchTab('dynamic-forms')" id="nav-dynamic-forms" class="w-full flex items-center justify-between px-4 py-3 rounded-xl transition font-semibold text-sm hover:bg-slate-800 hover:text-white text-slate-400">
+                        <div class="flex items-center space-x-3 space-x-reverse">
+                            <i class="fas fa-file-invoice text-lg w-6"></i>
+                            <span>النماذج اليومية</span>
+                        </div>
+                        <span id="pending-forms-count" class="bg-rose-50 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+                    </button>
+
+                    <!-- Smart Document Filler (تعبئة الملفات الفارغة) -->
+                    <button onclick="switchTab('file-filler')" id="nav-file-filler" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition font-semibold text-sm hover:bg-slate-800 hover:text-white text-slate-400">
+                        <i class="fas fa-file-signature text-lg w-6"></i>
+                        <span>تعبئة ملفات Word/Excel</span>
+                    </button>
+
+                    <!-- Admin Section Header -->
+                    <div class="pt-4 pb-2 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider" id="admin-menu-header">إدارة النظام</div>
+
+                    <!-- Manage Branches & Personnel (Visible to all, but restricted layout for branch users) -->
+                    <button onclick="switchTab('manage-branches')" id="nav-manage-branches" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition font-semibold text-sm hover:bg-slate-800 hover:text-white text-slate-400">
+                        <i class="fas fa-sitemap text-lg w-6"></i>
+                        <span id="nav-branches-text">إدارة الفروع والموظفين</span>
+                    </button>
+
+                    <!-- Global System Settings -->
+                    <button onclick="requestSettingsAccess()" id="nav-settings" class="w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition font-semibold text-sm hover:bg-slate-800 hover:text-white text-slate-400">
+                        <i class="fas fa-sliders-h text-lg w-6"></i>
+                        <span>إعدادات الهوية والأمان</span>
+                    </button>
+                </nav>
+
+                <!-- Footer with log-out -->
+                <div class="p-4 border-t border-slate-800/60 bg-slate-950/40">
+                    <button onclick="handleLogout()" class="w-full flex items-center justify-center space-x-2 space-x-reverse py-3 px-4 rounded-xl bg-rose-950/40 text-rose-400 hover:bg-rose-900/40 hover:text-rose-300 font-bold text-sm transition">
+                        <i class="fas fa-power-off"></i>
+                        <span>تسجيل الخروج</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main class="flex-grow flex flex-col min-w-0 bg-slate-50">
+                <!-- Top Navbar -->
+                <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shrink-0 shadow-sm">
+                    <div class="flex items-center space-x-4 space-x-reverse">
+                        <h2 id="current-page-title" class="text-xl font-extrabold text-slate-800">الرئيسية والإحصائيات</h2>
+                    </div>
+                    <div class="flex items-center space-x-4 space-x-reverse">
+                        <div class="hidden sm:flex flex-col text-left items-end">
+                            <span id="live-time" class="font-bold text-slate-800 text-sm"></span>
+                            <span id="live-date" class="text-xs text-slate-400"></span>
+                        </div>
+                        <div class="relative cursor-pointer hover:bg-slate-100 p-2.5 rounded-full transition" onclick="switchTab('documents')">
+                            <i class="fas fa-bell text-slate-600 text-lg"></i>
+                            <span id="bell-indicator" class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full hidden"></span>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Scrollable Viewport for tabs -->
+                <div class="flex-grow p-4 sm:p-6 overflow-y-auto max-w-7xl w-full mx-auto space-y-6">
+
+                    <!-- TAB 1: OVERVIEW / STATISTICS -->
+                    <div id="tab-overview" class="space-y-6">
+                        <!-- Welcome Hero -->
+                        <div class="bg-gradient-to-l from-indigo-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+                            <div class="absolute -right-16 -bottom-16 w-64 h-64 bg-indigo-800/20 rounded-full blur-3xl"></div>
+                            <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+                                <div class="space-y-2 text-center md:text-right">
+                                    <span class="bg-amber-400 text-slate-900 text-xs px-3 py-1 rounded-full font-extrabold tracking-wide uppercase">مرحباً بك مجدداً</span>
+                                    <h3 id="hero-welcome-msg" class="text-2xl sm:text-3xl font-extrabold">...</h3>
+                                    <p class="text-indigo-200 text-sm max-w-xl">أهلاً بك في البوابة الإلكترونية الموحدة لربط المركز الرئيسي بجميع مكاتب وإدارات المالية بالمديريات. يمكنك الآن نقل المستندات وإنشاء النماذج وتعبئتها بكل يسر وسرعة.</p>
+                                </div>
+                                <div class="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl flex space-x-4 space-x-reverse shrink-0">
+                                    <div class="text-center px-4 border-l border-white/10">
+                                        <p class="text-xs text-indigo-300">البريد الوارد</p>
+                                        <p id="stat-hero-incoming" class="text-2xl font-black mt-1 text-amber-300">0</p>
+                                    </div>
+                                    <div class="text-center px-4">
+                                        <p class="text-xs text-indigo-300">البريد الصادر</p>
+                                        <p id="stat-hero-outgoing" class="text-2xl font-black mt-1 text-emerald-300">0</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stats Cards Grid -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <!-- Card 1 -->
+                            <div class="bg-white rounded-2xl border border-slate-100 p-5 flex items-center space-x-4 space-x-reverse shadow-sm">
+                                <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xl shrink-0">
+                                    <i class="fas fa-file-alt"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-semibold text-slate-400">إجمالي المعاملات والوثائق</p>
+                                    <h4 id="stat-total-docs" class="text-xl font-bold text-slate-800 mt-1">0</h4>
+                                </div>
+                            </div>
+                            <!-- Card 2 -->
+                            <div class="bg-white rounded-2xl border border-slate-100 p-5 flex items-center space-x-4 space-x-reverse shadow-sm">
+                                <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-xl shrink-0">
+                                    <i class="fas fa-tasks"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-semibold text-slate-400">النماذج اليومية النشطة</p>
+                                    <h4 id="stat-active-forms" class="text-xl font-bold text-slate-800 mt-1">0</h4>
+                                </div>
+                            </div>
+                            <!-- Card 3 -->
+                            <div class="bg-white rounded-2xl border border-slate-100 p-5 flex items-center space-x-4 space-x-reverse shadow-sm">
+                                <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl shrink-0">
+                                    <i class="fas fa-building"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-semibold text-slate-400">إجمالي الفروع والإدارات</p>
+                                    <h4 id="stat-total-branches" class="text-xl font-bold text-slate-800 mt-1">0</h4>
+                                </div>
+                            </div>
+                            <!-- Card 4 -->
+                            <div class="bg-white rounded-2xl border border-slate-100 p-5 flex items-center space-x-4 space-x-reverse shadow-sm">
+                                <div class="w-12 h-12 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center text-xl shrink-0">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-semibold text-slate-400">الموظفين النشطين</p>
+                                    <h4 id="stat-total-users" class="text-xl font-bold text-slate-800 mt-1">0</h4>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- System shortcuts and latest activity -->
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <!-- Latest Activity List -->
+                            <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm lg:col-span-2">
+                                <div class="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
+                                    <h3 class="font-extrabold text-slate-800 flex items-center space-x-2 space-x-reverse">
+                                        <i class="fas fa-history text-indigo-600"></i>
+                                        <span>آخر التحركات والمراسلات</span>
+                                    </h3>
+                                    <button onclick="switchTab('documents')" class="text-indigo-600 hover:text-indigo-700 text-xs font-bold">عرض الكل</button>
+                                </div>
+                                <div class="space-y-4" id="recent-activities-list">
+                                    <!-- Dynamic list of items -->
+                                </div>
+                            </div>
+
+                            <!-- Quick Action Card -->
+                            <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm flex flex-col justify-between">
+                                <div class="space-y-4">
+                                    <h3 class="font-extrabold text-slate-800 flex items-center space-x-2 space-x-reverse">
+                                        <i class="fas fa-bolt text-amber-500"></i>
+                                        <span>إجراءات سريعة</span>
+                                    </h3>
+                                    <p class="text-slate-500 text-xs">اختر إجراءً لبدء العمل والتعامل مع الإدارات بشكل مباشر وموفر للوقت.</p>
+                                    <div class="space-y-2 pt-2">
+                                        <button onclick="openSendDocModal()" class="w-full py-2.5 px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-xs flex items-center justify-between transition">
+                                            <span>إرسال وثيقة/معاملة جديدة</span>
+                                            <i class="fas fa-arrow-left"></i>
+                                        </button>
+                                        <button onclick="switchTab('dynamic-forms')" class="w-full py-2.5 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold rounded-xl text-xs flex items-center justify-between transition">
+                                            <span>إنشاء نموذج يومي جديد</span>
+                                            <i class="fas fa-arrow-left"></i>
+                                        </button>
+                                        <button onclick="switchTab('file-filler')" class="w-full py-2.5 px-4 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold rounded-xl text-xs flex items-center justify-between transition">
+                                            <span>رفع وتعبئة نموذج Word/Excel</span>
+                                            <i class="fas fa-arrow-left"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="pt-6 mt-6 border-t border-slate-100">
+                                    <div class="p-3 bg-amber-50 rounded-xl border border-amber-100 flex items-start space-x-2 space-x-reverse text-amber-800">
+                                        <i class="fas fa-exclamation-triangle mt-0.5 text-sm"></i>
+                                        <p class="text-[11px] leading-normal font-semibold">تأكد من تسمية الملفات ومراجعتها جيداً قبل إرسالها إلى الإدارات المختصة، فهذا يسهل عملية الأرشفة وحفظ البيانات.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <!-- TAB 2: DOCUMENTS AND CORRESPONDENCE -->
+                    <div id="tab-documents" class="hidden space-y-6">
+                        <!-- Upper Action Bar -->
+                        <div class="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button onclick="filterDocs('all')" id="btn-doc-all" class="px-4 py-2 bg-indigo-900 text-white rounded-full text-xs font-bold transition">الكل</button>
+                                <button onclick="filterDocs('قرارات')" id="btn-doc-قرارات" class="px-4 py-2 bg-white hover:bg-indigo-50 text-slate-600 rounded-full text-xs font-bold border border-slate-200 transition">القرارات</button>
+                                <button onclick="filterDocs('استمارات')" id="btn-doc-استمارات" class="px-4 py-2 bg-white hover:bg-indigo-50 text-slate-600 rounded-full text-xs font-bold border border-slate-200 transition">الاستمارات</button>
+                                <button onclick="filterDocs('نماذج')" id="btn-doc-نماذج" class="px-4 py-2 bg-white hover:bg-indigo-50 text-slate-600 rounded-full text-xs font-bold border border-slate-200 transition">النماذج</button>
+                                <button onclick="filterDocs('أخرى')" id="btn-doc-أخرى" class="px-4 py-2 bg-white hover:bg-indigo-50 text-slate-600 rounded-full text-xs font-bold border border-slate-200 transition">أخرى</button>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="openSendDocModal()" class="flex-grow sm:flex-grow-0 py-2.5 px-5 bg-indigo-900 hover:bg-indigo-950 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-2 space-x-reverse shadow-lg transition">
+                                    <i class="fas fa-paper-plane"></i>
+                                    <span>إرسال مراسلة جديدة</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Main Documents Grid & Folder download options -->
+                        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                            <!-- Sidebar directory downloader -->
+                            <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+                                <h3 class="font-extrabold text-slate-800 text-sm pb-2 border-b border-slate-100 flex items-center space-x-2 space-x-reverse">
+                                    <i class="fas fa-download text-indigo-600"></i>
+                                    <span>تنزيل وتنظيم المستندات</span>
+                                </h3>
+                                <p class="text-xs text-slate-500 leading-normal">يقوم النظام بتنزيل الملفات وتنظيمها في مجلدات متكاملة حسب الفروع والإدارات لتبسيط أرشفة جهازك الشخصي.</p>
+                                
+                                <div class="space-y-3 pt-2">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1.5">اختر الفرع للتصدير</label>
+                                        <select id="download-branch-select" class="w-full p-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50">
+                                            <option value="all">كل الفروع والإدارات</option>
+                                            <!-- Dynamic options -->
+                                        </select>
+                                    </div>
+                                    <button onclick="downloadDocumentsZip()" class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-2 space-x-reverse transition">
+                                        <i class="fas fa-file-archive"></i>
+                                        <span>تنزيل المجلد المختار (ZIP)</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- List of Documents/Correspondence -->
+                            <div class="lg:col-span-3 space-y-4" id="documents-container">
+                                <!-- Dynamic documents inside -->
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <!-- TAB 3: DYNAMIC FORMS / DAILY FORMS -->
+                    <div id="tab-dynamic-forms" class="hidden space-y-6">
+                        <!-- Top options -->
+                        <div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                            <div>
+                                <h3 class="font-extrabold text-slate-800">نماذج العمل اليومية والتقارير</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">قم ببناء نماذج تعبئة مخصصة وإرسالها للفروع، أو قم بتعبئة النماذج المطلوبة منك.</p>
+                            </div>
+                            <button onclick="openCreateFormModal()" id="btn-create-form" class="w-full sm:w-auto py-2.5 px-4 bg-indigo-950 hover:bg-indigo-900 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-2 space-x-reverse transition">
+                                <i class="fas fa-plus-circle"></i>
+                                <span>إنشاء نموذج جديد مخصص</span>
+                            </button>
+                        </div>
+
+                        <!-- Active forms lists (Created by me, Sent to me) -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Section: Required Forms to Fill (Received) -->
+                            <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+                                <h4 class="font-extrabold text-slate-800 text-sm pb-2 border-b border-slate-100 flex items-center justify-between">
+                                    <span class="flex items-center space-x-2 space-x-reverse">
+                                        <i class="fas fa-inbox text-rose-500"></i>
+                                        <span>نماذج مطلوب تعبئتها</span>
+                                    </span>
+                                    <span id="badge-received-forms" class="bg-rose-50 text-rose-600 text-xs px-2.5 py-1 rounded-full font-bold">0 نموذج</span>
+                                </h4>
+                                <div class="space-y-4 max-h-[400px] overflow-y-auto" id="received-forms-list">
+                                    <!-- Dynamic list of forms received -->
+                                </div>
+                            </div>
+
+                            <!-- Section: Sent Forms & Responses (Sent) -->
+                            <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+                                <h4 class="font-extrabold text-slate-800 text-sm pb-2 border-b border-slate-100 flex items-center justify-between">
+                                    <span class="flex items-center space-x-2 space-x-reverse">
+                                        <i class="fas fa-paper-plane text-emerald-500"></i>
+                                        <span>نماذج قمت بإرسالها ومتابعتها</span>
+                                    </span>
+                                    <span id="badge-sent-forms" class="bg-emerald-50 text-emerald-600 text-xs px-2.5 py-1 rounded-full font-bold">0 مرسل</span>
+                                </h4>
+                                <div class="space-y-4 max-h-[400px] overflow-y-auto" id="sent-forms-list">
+                                    <!-- Dynamic list of forms sent -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <!-- TAB 4: FILE FILLER (WORD/EXCEL INTERACTIVE FILLER) -->
+                    <div id="tab-file-filler" class="hidden space-y-6">
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+                            <div>
+                                <h3 class="font-extrabold text-slate-800">مُعبئ الملفات التفاعلي والذكي</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">طريقة ثورية لتعبئة النماذج والوثائق الشائعة مثل ملفات Word و Excel التي تحتوي على بيانات فارغة. يمكنك رفع الملف، وتحديد الحقول المخصصة لتقوم الجهات المستهدفة بتعبئتها مباشرة من خلال واجهة تفاعلية دون إحداث أي خلل بتنسيق الملفات.</p>
+                            </div>
+
+                            <!-- Step layout -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+                                <!-- Upload & Template Prep -->
+                                <div class="space-y-4 border-l border-slate-100 pl-0 md:pl-6">
+                                    <h4 class="font-bold text-indigo-900 text-sm flex items-center space-x-2 space-x-reverse">
+                                        <span class="w-6 h-6 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center text-xs">1</span>
+                                        <span>تحميل وتجهيز قالب النموذج</span>
+                                    </h4>
+                                    
+                                    <div class="space-y-3">
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-700 mb-1.5">اسم قالب المستند</label>
+                                            <input type="text" id="filler-title" class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="مثال: استمارة صرف رواتب شهر مارس">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-700 mb-1.5">الملف الأصلي (Word/Excel)</label>
+                                            <div class="border-2 border-dashed border-slate-200 hover:border-indigo-400 rounded-2xl p-4 text-center cursor-pointer transition relative">
+                                                <input type="file" id="filler-file-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                                <i class="fas fa-file-invoice text-3xl text-slate-400 mb-2"></i>
+                                                <p class="text-[11px] text-slate-600 font-bold" id="filler-file-name">اسحب وأفلت الملف هنا أو تصفح</p>
+                                                <p class="text-[9px] text-slate-400 mt-1">يدعم DOCX, XLSX, XLS</p>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-700 mb-1.5">الجهة المستهدفة بالتعبئة</label>
+                                            <select id="filler-target-branch" class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50">
+                                                <!-- Options populated dynamically -->
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Fields Configuration -->
+                                <div class="space-y-4">
+                                    <h4 class="font-bold text-indigo-900 text-sm flex items-center space-x-2 space-x-reverse">
+                                        <span class="w-6 h-6 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center text-xs">2</span>
+                                        <span>تحديد الحقول المطلوب ملؤها</span>
+                                    </h4>
+                                    <p class="text-xs text-slate-400">حدد أسماء المتغيرات والأماكن الفارغة التي يجب على الموظف ملؤها بالقيم.</p>
+                                    
+                                    <div class="space-y-2 max-h-[220px] overflow-y-auto" id="filler-fields-list">
+                                        <!-- Interactive fields list builder -->
+                                    </div>
+
+                                    <button onclick="addFillerField()" class="w-full py-2 border border-dashed border-indigo-300 text-indigo-700 hover:bg-indigo-50 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1 space-x-reverse">
+                                        <i class="fas fa-plus"></i>
+                                        <span>إضافة حقل جديد</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="pt-4 border-t border-slate-100 flex justify-end">
+                                <button onclick="sendInteractiveFileTemplate()" class="py-3 px-6 bg-indigo-900 hover:bg-indigo-950 text-white font-bold rounded-xl text-xs flex items-center space-x-2 space-x-reverse shadow-lg transition">
+                                    <i class="fas fa-paper-plane"></i>
+                                    <span>حفظ ونشر القالب التفاعلي</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Active Interactive Files List -->
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+                            <h3 class="font-extrabold text-slate-800 text-sm pb-2 border-b border-slate-100">
+                                <i class="fas fa-file-signature text-amber-500 ml-1"></i>
+                                <span>قوالب المستندات التفاعلية قيد العمل والتعبئة</span>
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="filler-templates-grid">
+                                <!-- Dynamic items loaded inside -->
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <!-- TAB 5: MANAGE BRANCHES AND EMPLOYEES (ADMIN ONLY OR READ-ONLY FOR BRANCH USERS) -->
+                    <div id="tab-manage-branches" class="hidden space-y-6">
+                        <!-- Top header card -->
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+                            <div>
+                                <h3 class="font-extrabold text-slate-800" id="manage-branches-title">إدارة الهيكل التنظيمي والموظفين</h3>
+                                <p class="text-xs text-slate-400 mt-0.5" id="manage-branches-desc">أضف الفروع، الإدارات، أنشئ حسابات جديدة، وتحكم في الصلاحيات وكلمات المرور.</p>
+                            </div>
+                            <div class="flex gap-2 w-full sm:w-auto" id="admin-branches-actions">
+                                <button onclick="openAddBranchModal()" class="flex-1 sm:flex-none py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1.5 space-x-reverse transition">
+                                    <i class="fas fa-plus"></i>
+                                    <span>إضافة فرع/إدارة</span>
+                                </button>
+                                <button onclick="openAddUserModal()" class="flex-1 sm:flex-none py-2.5 px-4 bg-indigo-900 hover:bg-indigo-950 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1.5 space-x-reverse transition">
+                                    <i class="fas fa-user-plus"></i>
+                                    <span>إضافة موظف مسؤول</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Branches and Users Lists -->
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <!-- Left: List of Branches / Divisions -->
+                            <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+                                <h4 class="font-extrabold text-slate-800 text-sm pb-2 border-b border-slate-100 flex items-center justify-between">
+                                    <span>الفروع والإدارات</span>
+                                    <span id="badge-branch-count" class="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full font-bold">0 فرع</span>
+                                </h4>
+                                <div class="space-y-3" id="branches-list-container">
+                                    <!-- Dynamic branches inside -->
+                                </div>
+                            </div>
+
+                            <!-- Right: List of Personnel / Accounts -->
+                            <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+                                <h4 class="font-extrabold text-slate-800 text-sm pb-2 border-b border-slate-100 flex items-center justify-between">
+                                    <span id="personnel-header-title">الحسابات والموظفين المسؤولين</span>
+                                    <span id="badge-user-count" class="bg-indigo-50 text-indigo-600 text-xs px-2 py-0.5 rounded-full font-bold">0 حساب</span>
+                                </h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto max-h-[500px]" id="users-list-container">
+                                    <!-- Dynamic users card inside -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <!-- TAB 6: GLOBAL SETTINGS -->
+                    <div id="tab-settings" class="hidden space-y-6">
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6 max-w-3xl mx-auto">
+                            <div>
+                                <h3 class="font-extrabold text-slate-800 text-lg">إعدادات الهوية والتطوير</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">تغيير مسمى النظام، الشعار، مستويات الأمان، وكلمة المرور الرئيسية للنظام المالي.</p>
+                            </div>
+
+                            <!-- Settings form -->
+                            <div class="space-y-4">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1.5">اسم النظام (بالعربية)</label>
+                                        <input type="text" id="set-sys-name" class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="مثال: نظام المراسلات المالي">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1.5">شعار النظام (أيقونة فاخرة)</label>
+                                        <select id="set-sys-icon" class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50">
+                                            <option value="fa-balance-scale">ميزان العدالة (افتراضي)</option>
+                                            <option value="fa-university">مبنى حكومي</option>
+                                            <option value="fa-file-invoice-dollar">ملف مالي ومحاسبي</option>
+                                            <option value="fa-shield-alt">درع الأمان</option>
+                                            <option value="fa-paper-plane">طائرة ورقية ورسائل</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1.5">تغيير كلمة مرور قفل الإعدادات</label>
+                                        <input type="password" id="set-sys-password" class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="اترك فارغاً لعدم التغيير">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1.5">مستوى تشفير كلمات المرور</label>
+                                        <select class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50" disabled>
+                                            <option>تشفير SHA-256 (مُفعّل تلقائياً بضمان الأمان)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-start space-x-3 space-x-reverse text-emerald-800">
+                                    <i class="fas fa-check-circle mt-0.5 text-lg"></i>
+                                    <div>
+                                        <h5 class="text-xs font-bold">الأمن والأمان في النظام</h5>
+                                        <p class="text-[11px] leading-normal text-slate-600 mt-1">يضمن النظام عدم تخزين كلمات المرور كنصوص واضحة، بل يتم تشفيرها وتخزينها لحمايتها من المتسللين. بالإضافة إلى قفل الإعدادات بمستوى حماية إضافي لمنع عبث الموظفين.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="pt-4 border-t border-slate-100 flex justify-end">
+                                <button onclick="saveGlobalSettings()" class="py-2.5 px-6 bg-indigo-900 hover:bg-indigo-950 text-white font-bold rounded-xl text-xs flex items-center space-x-2 space-x-reverse shadow-lg transition">
+                                    <i class="fas fa-save"></i>
+                                    <span>حفظ وتطبيق التغييرات</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+        </div>
+
+    </div>
+
+    <!-- MODAL: SEND DOCUMENT -->
+    <div id="modal-send-doc" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg border border-slate-100 overflow-hidden">
+            <div class="bg-indigo-900 text-white p-5 flex justify-between items-center">
+                <h3 class="font-extrabold text-sm flex items-center space-x-2 space-x-reverse">
+                    <i class="fas fa-paper-plane text-amber-300"></i>
+                    <span>تجهيز وإرسال معاملة/وثيقة جديدة</span>
+                </h3>
+                <button onclick="closeSendDocModal()" class="text-white/80 hover:text-white transition"><i class="fas fa-times"></i></button>
+            </div>
+            <form onsubmit="handleSendDoc(event)" class="p-6 space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">نوع التبويب</label>
+                        <select id="doc-form-tab" class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50">
+                            <option value="قرارات">قرارات</option>
+                            <option value="استمارات">استمارات</option>
+                            <option value="نماذج">نماذج</option>
+                            <option value="أخرى">أخرى</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">الجهة المستلمة</label>
+                        <select id="doc-form-target" class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">عنوان المراسلة/الموضوع</label>
+                    <input type="text" id="doc-form-title" required class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="مثال: قرار تعيين مدير إدارة الموارد المالية بمديرية صالة">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">ملاحظات أو شرح توضيحي</label>
+                    <textarea id="doc-form-desc" rows="3" class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="اكتب تفاصيل أو ملاحظات حول هذه المعاملة..."></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">المستندات المرفقة</label>
+                    <div class="border-2 border-dashed border-slate-200 hover:border-indigo-500 rounded-2xl p-4 text-center cursor-pointer relative">
+                        <input type="file" id="doc-form-file" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                        <i class="fas fa-cloud-upload-alt text-2xl text-slate-400 mb-1"></i>
+                        <p class="text-[10px] text-slate-600 font-bold" id="doc-form-file-name">انقر هنا لاختيار ملف (Word, Excel, PDF, صور..)</p>
+                        <p class="text-[8px] text-slate-400">أي صيغة وأي حجم متاح للرفع السريع</p>
+                    </div>
+                </div>
+
+                <div class="flex space-x-2 space-x-reverse pt-2">
+                    <button type="submit" class="flex-1 bg-indigo-900 hover:bg-indigo-950 text-white font-bold py-2.5 px-4 rounded-xl transition text-xs">إرسال المراسلة فوراً</button>
+                    <button type="button" onclick="closeSendDocModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-xl transition text-xs">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CREATE CUSTOM DYNAMIC FORM -->
+    <div id="modal-create-form" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg border border-slate-100 overflow-hidden">
+            <div class="bg-indigo-950 text-white p-5 flex justify-between items-center">
+                <h3 class="font-extrabold text-sm flex items-center space-x-2 space-x-reverse">
+                    <i class="fas fa-plus-circle text-amber-300"></i>
+                    <span>بناء وتصميم نموذج مخصص</span>
+                </h3>
+                <button onclick="closeCreateFormModal()" class="text-white/80 hover:text-white transition"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">اسم النموذج المالي واليومي</label>
+                    <input type="text" id="df-title" required class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="مثال: كشف الإيرادات والمحصلة اليومية">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">الجهة المطلوب منها التعبئة</label>
+                    <select id="df-target-branch" class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-bold text-slate-700">حقول النموذج المطلوب إنشاؤها</label>
+                        <button onclick="addDfField()" class="text-indigo-600 hover:text-indigo-800 text-xs font-bold flex items-center space-x-1 space-x-reverse">
+                            <i class="fas fa-plus"></i>
+                            <span>أضف حقل</span>
+                        </button>
+                    </div>
+                    <div class="space-y-2 max-h-[180px] overflow-y-auto" id="df-fields-container">
+                        <!-- Dynamic list of newly created custom fields -->
+                    </div>
+                </div>
+
+                <div class="flex space-x-2 space-x-reverse pt-2">
+                    <button onclick="handleCreateFormSubmit()" class="flex-1 bg-indigo-900 hover:bg-indigo-950 text-white font-bold py-2.5 px-4 rounded-xl transition text-xs">حفظ وإرسال النموذج للفرع</button>
+                    <button type="button" onclick="closeCreateFormModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-xl transition text-xs">إلغاء</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: FILL RECEIVED DYNAMIC FORM -->
+    <div id="modal-fill-form" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg border border-slate-100 overflow-hidden">
+            <div class="bg-emerald-700 text-white p-5 flex justify-between items-center">
+                <h3 class="font-extrabold text-sm flex items-center space-x-2 space-x-reverse">
+                    <i class="fas fa-edit"></i>
+                    <span id="fill-form-header">تعبئة بيانات النموذج</span>
+                </h3>
+                <button onclick="closeFillFormModal()" class="text-white/80 hover:text-white transition"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p id="fill-form-instructions" class="text-xs text-slate-500"></p>
+                <div class="space-y-4 max-h-[300px] overflow-y-auto" id="fill-form-inputs-container">
+                    <!-- Dynamic fields inputs to be filled -->
+                </div>
+                <div class="flex space-x-2 space-x-reverse pt-2">
+                    <button onclick="submitFilledForm()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl transition text-xs">إرسال البيانات المكتملة للمركز</button>
+                    <button type="button" onclick="closeFillFormModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-xl transition text-xs">إلغاء</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: FILL INTERACTIVE FILE (WORD/EXCEL) -->
+    <div id="modal-fill-interactive" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg border border-slate-100 overflow-hidden">
+            <div class="bg-amber-600 text-white p-5 flex justify-between items-center">
+                <h3 class="font-extrabold text-sm flex items-center space-x-2 space-x-reverse">
+                    <i class="fas fa-file-signature"></i>
+                    <span>تعبئة القالب التفاعلي دون تعديل الهيكل</span>
+                </h3>
+                <button onclick="closeFillInteractiveModal()" class="text-white/80 hover:text-white transition"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="p-3 bg-amber-50 text-amber-900 rounded-xl text-xs font-semibold leading-relaxed border border-amber-100" id="fill-interactive-info">
+                    هذا النموذج مأخوذ من ملف Word/Excel أصلي. يرجى ملء الحقول المطلوبة بالأسفل، وسيتولى النظام حقنها تلقائياً بالملف الأصلي لحفظ التنسيق.
+                </div>
+
+                <div class="space-y-4 max-h-[300px] overflow-y-auto" id="interactive-inputs-container">
+                    <!-- Dynamic inputs populated -->
+                </div>
+
+                <div class="flex space-x-2 space-x-reverse pt-2">
+                    <button onclick="submitInteractiveValues()" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 px-4 rounded-xl transition text-xs">تعبئة المستند وإرساله</button>
+                    <button type="button" onclick="closeFillInteractiveModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-xl transition text-xs">إلغاء</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD BRANCH -->
+    <div id="modal-add-branch" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md border border-slate-100 overflow-hidden">
+            <div class="bg-emerald-600 text-white p-5 flex justify-between items-center">
+                <h3 class="font-extrabold text-sm">إضافة فرع أو إدارة جديدة</h3>
+                <button onclick="closeAddBranchModal()" class="text-white/80 hover:text-white transition"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">اسم الفرع/الإدارة</label>
+                    <input type="text" id="branch-form-name" required class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="مثال: مكتب المالية بمديرية القاهرة">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">المديرية التابع لها</label>
+                    <input type="text" id="branch-form-district" required class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="مثال: مديرية القاهرة">
+                </div>
+                <div class="flex space-x-2 space-x-reverse pt-2">
+                    <button onclick="handleAddBranchSubmit()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl transition text-xs">حفظ الفرع</button>
+                    <button type="button" onclick="closeAddBranchModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-xl transition text-xs">إلغاء</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD USER / ACCOUNT -->
+    <div id="modal-add-user" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg border border-slate-100 overflow-hidden">
+            <div class="bg-indigo-900 text-white p-5 flex justify-between items-center">
+                <h3 class="font-extrabold text-sm" id="user-modal-title">إنشاء حساب موظف مسؤول جديد</h3>
+                <button onclick="closeAddUserModal()" class="text-white/80 hover:text-white transition"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                <input type="hidden" id="user-form-id">
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">الاسم الكامل للموظف</label>
+                        <input type="text" id="user-form-name" required class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="الاسم الرباعي واللقب">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">الدرجة الوظيفية</label>
+                        <input type="text" id="user-form-title" required class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="مثال: مدير عام الفرع">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">الفرع/الإدارة التابع لها</label>
+                        <select id="user-form-branch" class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">صلاحية النظام</label>
+                        <select id="user-form-role" class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50">
+                            <option value="موظف فرع">موظف فرع / إدارة</option>
+                            <option value="مدير نظام">مدير نظام (صلاحيات كاملة)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">اسم المستخدم (بالإنجليزي)</label>
+                        <input type="text" id="user-form-username" required class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="مثال: ali_taiz">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">كلمة المرور</label>
+                        <input type="password" id="user-form-password" required class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="تأمين عالي التشفير">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف (للاتصال المباشر)</label>
+                        <input type="text" id="user-form-phone" class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="مثال: 777123456">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">رقم الواتساب (بدون رمز الدولة)</label>
+                        <input type="text" id="user-form-whatsapp" class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="مثال: 777123456">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">الصورة الشخصية (اختيارية)</label>
+                    <div class="flex items-center space-x-4 space-x-reverse">
+                        <div class="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 border border-slate-200 overflow-hidden shrink-0">
+                            <img id="user-form-avatar-preview" src="" class="hidden w-full h-full object-cover">
+                            <i id="user-form-avatar-icon" class="fas fa-user text-xl"></i>
+                        </div>
+                        <input type="file" id="user-form-avatar" class="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                    </div>
+                </div>
+
+                <div class="flex space-x-2 space-x-reverse pt-2">
+                    <button onclick="handleAddUserSubmit()" class="flex-1 bg-indigo-900 hover:bg-indigo-950 text-white font-bold py-2.5 px-4 rounded-xl transition text-xs">حفظ الحساب</button>
+                    <button type="button" onclick="closeAddUserModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-xl transition text-xs">إلغاء</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        
+        let systemSettings = {
+            sysName: "نظام المراسلات الإلكتروني لمكتب مالية تعز",
+            sysIcon: "fa-balance-scale",
+            settingsPasswordHash: "123456" // Default lock screen pass
+        };
+
+        let loggedUser = null;
+        let activeTab = 'overview';
+        let currentDocFilter = 'all';
+
+        // Core Data Collections
+        let branches = [];
+        let users = [];
+        let documents = [];
+        let dynamicForms = [];
+        let fileFillers = [];
+
+        // Prepopulate data mock to make app fully responsive instantly on load
+        const defaultBranches = [
+            { id: "main_hq", name: "المركز الرئيسي بمكتب المالية تعز", district: "وسط المدينة" },
+            { id: "alqahera_br", name: "فرع مديرية القاهرة", district: "القاهرة" },
+            { id: "mudhaffar_br", name: "فرع مديرية المظفر", district: "المظفر" },
+            { id: "salah_br", name: "فرع مديرية صالة", district: "صالة" }
+        ];
+
+        // Setup admins and branch personnel with phone & whatsapp info
+        const defaultUsers = [
+            { id: "u_admin", name: "أ. ماجد السامعي", title: "مدير عام مكتب المالية تعز", branchId: "main_hq", role: "مدير نظام", username: "admin", passwordHash: "123456", avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=150&h=150", phone: "777000111", whatsapp: "777000111" },
+            { id: "u_admin2", name: "أ. عبدالرقيب المقطري", title: "مدير مساعد - المركز الرئيسي", branchId: "main_hq", role: "مدير نظام", username: "admin2", passwordHash: "123456", avatar: "", phone: "733222333", whatsapp: "733222333" },
+            { id: "u_user1", name: "م. منيف القدسي", title: "مسؤول الشؤون المالية بمديرية القاهرة", branchId: "alqahera_br", role: "موظف فرع", username: "alqahera", passwordHash: "123456", avatar: "", phone: "771888999", whatsapp: "771888999" },
+            { id: "u_user2", name: "أ. سهيل الشرجبي", title: "أمين الصندوق بفرع المظفر", branchId: "mudhaffar_br", role: "موظف فرع", username: "mudhaffar", passwordHash: "123456", avatar: "", phone: "711555666", whatsapp: "711555666" }
+        ];
+
+        const defaultDocs = [
+            { id: "doc1", tab: "قرارات", senderId: "u_admin", receiverBranchId: "alqahera_br", title: "قرار إداري رقم 15 بشأن تسريع صرف نفقات النظافة والتحسين", desc: "يرجى من فرع القاهرة الاستلام والعمل فوراً بما جاء في بنود القرار.", fileName: "قرار_المالية_رقم_15.pdf", fileType: "pdf", timestamp: "2026-05-18T10:30:00.000Z", isRead: false },
+            { id: "doc2", tab: "استمارات", senderId: "u_user1", receiverBranchId: "main_hq", title: "استمارة 50 مكرر الخاصة بميزانية مكاتب المديرية الربع السنوية", desc: "مرفق لكم الاستمارة المستكملة بالتوقيعات والأختام القانونية للمراجعة.", fileName: "استمارة_ميزانية_صالة_الربع_الأول.xlsx", fileType: "xlsx", timestamp: "2026-05-19T01:15:00.000Z", isRead: false }
+        ];
+
+        const defaultDynamicForms = [
+            {
+                id: "df1",
+                title: "تقرير التحصينات اليومي للمورد المالي لفرع القاهرة",
+                creatorId: "u_admin",
+                targetBranchId: "alqahera_br",
+                fields: [
+                    { name: "رسوم تراخيص المهن", value: "" },
+                    { name: "المخالفات والمبيعات", value: "" },
+                    { name: "ملاحظات المحصل اليومي", value: "" }
+                ],
+                isSubmitted: false,
+                submissionData: null,
+                timestamp: "2026-05-18T14:00:00.000Z"
+            }
+        ];
+
+        const defaultFileFillers = [
+            {
+                id: "ff1",
+                title: "قالب استمارة إعانة المعسرين المعتمد لعام 2026",
+                creatorId: "u_admin",
+                targetBranchId: "alqahera_br",
+                originalFile: "نموذج_رواتب.docx",
+                fields: [
+                    { placeholder: "اسم المستحق", value: "" },
+                    { placeholder: "الرقم الوطني", value: "" },
+                    { placeholder: "المبلغ المعتمد رقماً وكتابة", value: "" }
+                ],
+                isFilled: false,
+                timestamp: "2026-05-19T02:00:00.000Z"
+            }
+        ];
+
+        function initApp() {
+            if (localStorage.getItem('finance_branches')) {
+                branches = JSON.parse(localStorage.getItem('finance_branches'));
+                users = JSON.parse(localStorage.getItem('finance_users'));
+                documents = JSON.parse(localStorage.getItem('finance_documents'));
+                dynamicForms = JSON.parse(localStorage.getItem('finance_dynamic_forms'));
+                fileFillers = JSON.parse(localStorage.getItem('finance_file_fillers'));
+                systemSettings = JSON.parse(localStorage.getItem('finance_settings'));
+            } else {
+                branches = defaultBranches;
+                users = defaultUsers;
+                documents = defaultDocs;
+                dynamicForms = defaultDynamicForms;
+                fileFillers = defaultFileFillers;
+                saveToLocalStorage();
+            }
+
+            // Sync Settings UI
+            applySettingsToUI();
+
+            // Setup clock
+            updateClock();
+            setInterval(updateClock, 1000);
+
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('dashboard-screen').classList.add('hidden');
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('finance_branches', JSON.stringify(branches));
+            localStorage.setItem('finance_users', JSON.stringify(users));
+            localStorage.setItem('finance_documents', JSON.stringify(documents));
+            localStorage.setItem('finance_dynamic_forms', JSON.stringify(dynamicForms));
+            localStorage.setItem('finance_file_fillers', JSON.stringify(fileFillers));
+            localStorage.setItem('finance_settings', JSON.stringify(systemSettings));
+        }
+
+        function applySettingsToUI() {
+            document.getElementById('login-sys-name').textContent = systemSettings.sysName;
+            document.getElementById('sidebar-sys-name').textContent = systemSettings.sysName;
+            
+            const loginLogoIcon = document.getElementById('login-logo-icon');
+            const sidebarLogoIcon = document.getElementById('sidebar-logo-icon');
+            
+            loginLogoIcon.className = "fas text-indigo-900 text-4xl " + systemSettings.sysIcon;
+            sidebarLogoIcon.className = "fas text-indigo-900 text-2xl " + systemSettings.sysIcon;
+
+            document.getElementById('set-sys-name').value = systemSettings.sysName;
+            document.getElementById('set-sys-icon').value = systemSettings.sysIcon;
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const uInput = document.getElementById('login-username').value.trim();
+            const pInput = document.getElementById('login-password').value;
+
+            const matchedUser = users.find(u => u.username.toLowerCase() === uInput.toLowerCase() && u.passwordHash === pInput);
+
+            if (matchedUser) {
+                loggedUser = matchedUser;
+                showToast("مرحباً بك مجدداً! تم تسجيل الدخول بنجاح.", "success");
+                enterDashboard();
+            } else {
+                showToast("خطأ: اسم المستخدم أو كلمة المرور غير صحيحة!", "error");
+            }
+        }
+
+        function enterDashboard() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('dashboard-screen').classList.remove('hidden');
+
+            // Setup profile card
+            document.getElementById('user-full-name').textContent = loggedUser.name;
+            document.getElementById('user-title').textContent = loggedUser.title;
+            document.getElementById('hero-welcome-msg').textContent = `أهلاً بك، ${loggedUser.name}`;
+            
+            if (loggedUser.avatar) {
+                document.getElementById('user-avatar').src = loggedUser.avatar;
+            } else {
+                document.getElementById('user-avatar').src = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150";
+            }
+
+            document.getElementById('user-role-badge').textContent = loggedUser.role === 'مدير نظام' ? 'مدير نظام (صلاحيات كاملة)' : 'إدارة الفرع والمديرية';
+
+            const isAdmin = loggedUser.role === 'مدير نظام';
+
+            if (!isAdmin) {
+                // Securely hide settings nav and creation features
+                document.getElementById('admin-menu-header').classList.add('hidden');
+                document.getElementById('nav-settings').classList.add('hidden');
+                document.getElementById('btn-create-form').classList.add('hidden');
+                
+                // Block creation and adjustment panels in branch management
+                document.getElementById('admin-branches-actions').classList.add('hidden');
+                document.getElementById('manage-branches-title').textContent = "دليل الموظفين والفروع";
+                document.getElementById('manage-branches-desc').textContent = "دليل التواصل الموحد بأسماء مدراء النظام بمكتب المالية تعز بمختلف المديريات.";
+                document.getElementById('personnel-header-title').textContent = "قائمة مدراء النظام للتواصل";
+                document.getElementById('nav-branches-text').textContent = "دليل تواصل الإدارة";
+            } else {
+                // Reveal full settings and adjustments for administrators
+                document.getElementById('admin-menu-header').classList.remove('hidden');
+                document.getElementById('nav-settings').classList.remove('hidden');
+                document.getElementById('btn-create-form').classList.remove('hidden');
+                document.getElementById('admin-branches-actions').classList.remove('hidden');
+                document.getElementById('manage-branches-title').textContent = "إدارة الهيكل التنظيمي والموظفين";
+                document.getElementById('manage-branches-desc').textContent = "أضف الفروع، الإدارات، أنشئ حسابات جديدة، وتحكم في الصلاحيات وكلمات المرور.";
+                document.getElementById('personnel-header-title').textContent = "الحسابات والموظفين المسؤولين";
+                document.getElementById('nav-branches-text').textContent = "إدارة الفروع والموظفين";
+            }
+
+            populateBranchDropdowns();
+            switchTab('overview');
+        }
+
+        function handleLogout() {
+            loggedUser = null;
+            document.getElementById('dashboard-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('login-password').value = "";
+            showToast("تم تسجيل خروجك بنجاح.", "info");
+        }
+
+        function showForgetPasswordHelp() {
+            showToast("الرجاء مراجعة مدير النظام بالمركز الرئيسي لتغيير وتصفير كلمة المرور الخاصة بك.", "info");
+        }
+
+        function switchTab(tabName) {
+            // Strict role guard check for Settings page access
+            if (tabName === 'settings' && loggedUser.role !== 'مدير نظام') {
+                showToast("عذراً، لا تمتلك الصلاحيات الكافية للوصول إلى هذه الصفحة.", "error");
+                switchTab('overview');
+                return;
+            }
+
+            activeTab = tabName;
+            
+            // Hide all tab containers
+            const tabs = ['overview', 'documents', 'dynamic-forms', 'file-filler', 'manage-branches', 'settings'];
+            tabs.forEach(t => {
+                const element = document.getElementById(`tab-${t}`);
+                if (element) element.classList.add('hidden');
+                
+                // Adjust nav styles
+                const navBtn = document.getElementById(`nav-${t}`);
+                if (navBtn) {
+                    navBtn.className = "w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition font-semibold text-sm hover:bg-slate-800 hover:text-white text-slate-400";
+                }
+            });
+
+            // Show target
+            const targetTab = document.getElementById(`tab-${tabName}`);
+            if (targetTab) targetTab.classList.remove('hidden');
+            
+            const activeNav = document.getElementById(`nav-${tabName}`);
+            if (activeNav) {
+                activeNav.className = "w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition font-semibold text-sm bg-indigo-900 text-white shadow-md";
+            }
+
+            // Set Header Text
+            const pageTitles = {
+                overview: "الرئيسية والإحصائيات",
+                documents: "المراسلات والوثائق المؤرشفة",
+                'dynamic-forms': "نماذج المتابعة والتقارير اليومية",
+                'file-filler': "مُعبّئ المستندات الذكي",
+                'manage-branches': "إدارة الفروع والحسابات الحكومية",
+                settings: "إعدادات أمان وهوية المنصة"
+            };
+            document.getElementById('current-page-title').textContent = pageTitles[tabName];
+
+            // Trigger data reloading
+            renderCurrentTabData(tabName);
+        }
+
+        function renderCurrentTabData(tabName) {
+            updateLiveStats();
+
+            if (tabName === 'overview') {
+                renderOverviewActivities();
+            } else if (tabName === 'documents') {
+                renderDocumentsList();
+            } else if (tabName === 'dynamic-forms') {
+                renderDynamicForms();
+            } else if (tabName === 'file-filler') {
+                renderFileFillers();
+            } else if (tabName === 'manage-branches') {
+                renderBranchesAndUsers();
+            }
+        }
+
+        function openChangePasswordModal() {
+            document.getElementById('change-pass-current').value = '';
+            document.getElementById('change-pass-new').value = '';
+            document.getElementById('change-pass-confirm').value = '';
+            document.getElementById('modal-change-password').classList.remove('hidden');
+        }
+
+        function closeChangePasswordModal() {
+            document.getElementById('modal-change-password').classList.add('hidden');
+        }
+
+        function submitChangePassword() {
+            const currentPass = document.getElementById('change-pass-current').value;
+            const newPass = document.getElementById('change-pass-new').value;
+            const confirmPass = document.getElementById('change-pass-confirm').value;
+
+            if (!currentPass || !newPass || !confirmPass) {
+                showToast("الرجاء ملء جميع الحقول المطلوبة لتغيير كلمة المرور.", "error");
+                return;
+            }
+
+            if (currentPass !== loggedUser.passwordHash) {
+                showToast("كلمة المرور الحالية المدخلة خاطئة!", "error");
+                return;
+            }
+
+            if (newPass !== confirmPass) {
+                showToast("كلمتا المرور الجديدتان غير متطابقتين!", "error");
+                return;
+            }
+
+            if (newPass.length < 4) {
+                showToast("كلمة المرور الجديدة يجب أن تحتوي على 4 رموز على الأقل.", "error");
+                return;
+            }
+
+            const userIndex = users.findIndex(u => u.id === loggedUser.id);
+            if (userIndex !== -1) {
+                users[userIndex].passwordHash = newPass;
+                loggedUser.passwordHash = newPass;
+                saveToLocalStorage();
+                closeChangePasswordModal();
+                showToast("تم تحديث كلمة المرور الخاصة بك بنجاح.", "success");
+            }
+        }
+
+        function updateLiveStats() {
+            let viewableDocs = documents;
+            let receivedCount = 0;
+            let sentCount = 0;
+
+            const isAdmin = loggedUser.role === 'مدير نظام';
+
+            if (!isAdmin) {
+                // Only view documents belonging strictly to their branch or sent by them
+                viewableDocs = documents.filter(d => d.receiverBranchId === loggedUser.branchId || d.senderId === loggedUser.id);
+                receivedCount = documents.filter(d => d.receiverBranchId === loggedUser.branchId).length;
+                sentCount = documents.filter(d => d.senderId === loggedUser.id).length;
+            } else {
+                receivedCount = documents.filter(d => d.receiverBranchId === 'main_hq').length;
+                sentCount = documents.filter(d => d.senderId === loggedUser.id).length;
+            }
+
+            document.getElementById('stat-hero-incoming').textContent = receivedCount;
+            document.getElementById('stat-hero-outgoing').textContent = sentCount;
+            document.getElementById('stat-total-docs').textContent = viewableDocs.length;
+
+            const pendingForms = dynamicForms.filter(f => f.targetBranchId === loggedUser.branchId && !f.isSubmitted).length;
+            const pendingFillers = fileFillers.filter(f => f.targetBranchId === loggedUser.branchId && !f.isFilled).length;
+            const totalPendingActions = pendingForms + pendingFillers;
+
+            if (totalPendingActions > 0) {
+                document.getElementById('bell-indicator').classList.remove('hidden');
+                document.getElementById('pending-forms-count').classList.remove('hidden');
+                document.getElementById('pending-forms-count').textContent = totalPendingActions;
+            } else {
+                document.getElementById('bell-indicator').classList.add('hidden');
+                document.getElementById('pending-forms-count').classList.add('hidden');
+            }
+
+            document.getElementById('stat-active-forms').textContent = dynamicForms.filter(f => !f.isSubmitted).length;
+            document.getElementById('stat-total-branches').textContent = branches.length;
+            document.getElementById('stat-total-users').textContent = users.length;
+        }
+
+        function populateBranchDropdowns() {
+            const selects = [
+                document.getElementById('doc-form-target'),
+                document.getElementById('df-target-branch'),
+                document.getElementById('filler-target-branch'),
+                document.getElementById('user-form-branch')
+            ];
+
+            const isAdmin = loggedUser.role === 'مدير نظام';
+
+            selects.forEach(select => {
+                if (!select) return;
+                select.innerHTML = '';
+                
+                branches.forEach(b => {
+                    // Branch employees can message any branch but themselves
+                    if (!isAdmin && select.id === 'doc-form-target') {
+                        if (b.id !== loggedUser.branchId) {
+                            const opt = document.createElement('option');
+                            opt.value = b.id;
+                            opt.textContent = b.name;
+                            select.appendChild(opt);
+                        }
+                    } else {
+                        // Admins can select any branch
+                        const opt = document.createElement('option');
+                        opt.value = b.id;
+                        opt.textContent = b.name;
+                        select.appendChild(opt);
+                    }
+                });
+            });
+
+            const dlSelect = document.getElementById('download-branch-select');
+            if (dlSelect) {
+                dlSelect.innerHTML = '';
+                if (isAdmin) {
+                    dlSelect.innerHTML = '<option value="all">كل الفروع والإدارات</option>';
+                    branches.forEach(b => {
+                        const opt = document.createElement('option');
+                        opt.value = b.id;
+                        opt.textContent = b.name;
+                        dlSelect.appendChild(opt);
+                    });
+                } else {
+                    const ownBranch = branches.find(b => b.id === loggedUser.branchId);
+                    if (ownBranch) {
+                        const opt = document.createElement('option');
+                        opt.value = ownBranch.id;
+                        opt.textContent = ownBranch.name;
+                        dlSelect.appendChild(opt);
+                    }
+                }
+            }
+        }
+
+        function renderOverviewActivities() {
+            const container = document.getElementById('recent-activities-list');
+            container.innerHTML = '';
+
+            let viewableDocs = [...documents];
+            const isAdmin = loggedUser.role === 'مدير نظام';
+
+            if (!isAdmin) {
+                viewableDocs = documents.filter(d => d.receiverBranchId === loggedUser.branchId || d.senderId === loggedUser.id);
+            }
+
+            viewableDocs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            const sliced = viewableDocs.slice(0, 4);
+
+            if (sliced.length === 0) {
+                container.innerHTML = `
+                    <div class="p-6 text-center text-slate-400">
+                        <i class="fas fa-mail-bulk text-3xl mb-2 text-slate-300"></i>
+                        <p class="text-xs">لا توجد تحركات ومراسلات مسجلة تتبع فرعك حالياً.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            sliced.forEach(doc => {
+                const sender = users.find(u => u.id === doc.senderId);
+                const senderName = sender ? sender.name : "جهة مالية";
+                const dateText = formatDate(doc.timestamp);
+
+                const itemHtml = `
+                    <div class="flex items-start space-x-3 space-x-reverse p-3.5 hover:bg-slate-50 rounded-2xl transition border border-slate-100/50">
+                        <div class="w-10 h-10 bg-indigo-50 text-indigo-700 rounded-full flex items-center justify-center shrink-0">
+                            <i class="fas ${getFileIcon(doc.fileType)}"></i>
+                        </div>
+                        <div class="flex-grow overflow-hidden">
+                            <div class="flex items-center justify-between">
+                                <span class="bg-indigo-100 text-indigo-800 text-[10px] px-2 py-0.5 rounded-full font-bold">${doc.tab}</span>
+                                <span class="text-[10px] text-slate-400 font-semibold">${dateText}</span>
+                            </div>
+                            <h4 class="font-bold text-slate-800 text-xs mt-1 truncate">${doc.title}</h4>
+                            <p class="text-[11px] text-slate-400 truncate mt-0.5">بواسطة: ${senderName}</p>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', itemHtml);
+            });
+        }
+
+        function renderDocumentsList() {
+            const container = document.getElementById('documents-container');
+            container.innerHTML = '';
+
+            let viewableDocs = [...documents];
+            const isAdmin = loggedUser.role === 'مدير نظام';
+
+            if (!isAdmin) {
+                viewableDocs = documents.filter(d => d.receiverBranchId === loggedUser.branchId || d.senderId === loggedUser.id);
+            }
+
+            if (currentDocFilter !== 'all') {
+                viewableDocs = viewableDocs.filter(d => d.tab === currentDocFilter);
+            }
+
+            viewableDocs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            if (viewableDocs.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white p-12 text-center rounded-2xl border border-slate-100 text-slate-400 shadow-sm">
+                        <i class="fas fa-folder-open text-5xl mb-3 text-slate-200"></i>
+                        <p class="text-sm font-bold">لا توجد وثائق متاحة للعرض في هذا التبويب.</p>
+                        <p class="text-xs text-slate-400 mt-1">تقتصر الصلاحيات على المستندات الصادرة والواردة لفرعك فقط.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            viewableDocs.forEach(doc => {
+                const sender = users.find(u => u.id === doc.senderId);
+                const senderName = sender ? sender.name : "مجهول";
+                const senderBranchId = sender ? sender.branchId : "";
+                const senderBranch = branches.find(b => b.id === senderBranchId);
+                const senderBranchName = senderBranch ? senderBranch.name : "جهة غير معروفة";
+
+                const targetBranch = branches.find(b => b.id === doc.receiverBranchId);
+                const targetBranchName = targetBranch ? targetBranch.name : "الجهة المستهدفة";
+                const dateText = formatDate(doc.timestamp);
+
+                const cardHtml = `
+                    <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm space-y-4 hover:shadow-md transition">
+                        <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                            <div class="flex items-center space-x-3 space-x-reverse">
+                                <div class="w-12 h-12 rounded-xl bg-slate-50 text-slate-500 border border-slate-100 flex items-center justify-center text-2xl shrink-0">
+                                    <i class="fas ${getFileIcon(doc.fileType)}"></i>
+                                </div>
+                                <div>
+                                    <span class="bg-indigo-50 text-indigo-800 text-[10px] px-2.5 py-0.5 rounded-full font-extrabold uppercase">${doc.tab}</span>
+                                    <h4 class="font-extrabold text-slate-800 text-sm mt-1">${doc.title}</h4>
+                                </div>
+                            </div>
+                            <div class="text-left">
+                                <span class="text-xs text-slate-400 font-bold block"><i class="fas fa-clock ml-1"></i>${dateText}</span>
+                            </div>
+                        </div>
+
+                        <div class="p-4 bg-slate-50 rounded-xl text-slate-600 text-xs leading-relaxed border border-slate-100/50">
+                            ${doc.desc || "لا توجد ملاحظات إضافية مرفقة مع هذه المعاملة."}
+                        </div>
+
+                        <div class="flex flex-wrap gap-2 justify-between items-center pt-3 border-t border-slate-100 text-xs text-slate-500">
+                            <div class="space-y-1">
+                                <p>الجهة المرسلة: <strong class="text-indigo-950">${senderBranchName}</strong> (بواسطة: ${senderName})</p>
+                                <p>الجهة المستقبلة: <strong class="text-indigo-950">${targetBranchName}</strong></p>
+                            </div>
+                            <div class="flex space-x-2 space-x-reverse">
+                                <button onclick="downloadDocumentFile('${doc.fileName}', '${doc.title}')" class="py-1.5 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg transition flex items-center space-x-1 space-x-reverse">
+                                    <i class="fas fa-cloud-download-alt"></i>
+                                    <span>تحميل الملف</span>
+                                </button>
+                                ${isAdmin ? `
+                                <button onclick="deleteDocument('${doc.id}')" class="py-1.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-lg transition">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', cardHtml);
+            });
+        }
+
+        function filterDocs(filter) {
+            currentDocFilter = filter;
+            const tabs = ['all', 'قرارات', 'استمارات', 'نماذج', 'أخرى'];
+            tabs.forEach(t => {
+                const element = document.getElementById(`btn-doc-${t}`);
+                if (element) {
+                    if (t === filter) {
+                        element.className = "px-4 py-2 bg-indigo-900 text-white rounded-full text-xs font-bold transition";
+                    } else {
+                        element.className = "px-4 py-2 bg-white hover:bg-indigo-50 text-slate-600 rounded-full text-xs font-bold border border-slate-200 transition";
+                    }
+                }
+            });
+            renderDocumentsList();
+        }
+
+        function deleteDocument(docId) {
+            if (confirm("هل أنت متأكد من رغبتك في حذف هذا المستند نهائياً من الأرشيف؟")) {
+                documents = documents.filter(d => d.id !== docId);
+                saveToLocalStorage();
+                renderDocumentsList();
+                showToast("تم حذف المستند بنجاح.", "info");
+            }
+        }
+
+        let currentDfFields = [];
+
+        function openCreateFormModal() {
+            currentDfFields = [{ name: "رصيد الصندوق اليومي", value: "" }];
+            renderDfFieldsBuilder();
+            document.getElementById('modal-create-form').classList.remove('hidden');
+        }
+
+        function closeCreateFormModal() {
+            document.getElementById('modal-create-form').classList.add('hidden');
+        }
+
+        function addDfField() {
+            currentDfFields.push({ name: "", value: "" });
+            renderDfFieldsBuilder();
+        }
+
+        function removeDfField(index) {
+            currentDfFields.splice(index, 1);
+            renderDfFieldsBuilder();
+        }
+
+        function renderDfFieldsBuilder() {
+            const container = document.getElementById('df-fields-container');
+            container.innerHTML = '';
+            
+            currentDfFields.forEach((field, idx) => {
+                const div = document.createElement('div');
+                div.className = "flex items-center space-x-2 space-x-reverse";
+                div.innerHTML = `
+                    <input type="text" value="${field.name}" oninput="updateDfFieldName(${idx}, this.value)" required class="flex-grow p-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="اسم حقل الإدخال">
+                    <button type="button" onclick="removeDfField(${idx})" class="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition"><i class="fas fa-minus-circle"></i></button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function updateDfFieldName(index, val) {
+            currentDfFields[index].name = val;
+        }
+
+        function handleCreateFormSubmit() {
+            const title = document.getElementById('df-title').value.trim();
+            const targetBranch = document.getElementById('df-target-branch').value;
+
+            if (!title) {
+                showToast("الرجاء إدخال اسم النموذج المالي المخصص.", "error");
+                return;
+            }
+
+            if (currentDfFields.length === 0) {
+                showToast("الرجاء إضافة حقل واحد على الأقل للنموذج.", "error");
+                return;
+            }
+
+            const newForm = {
+                id: "df_" + Date.now(),
+                title: title,
+                creatorId: loggedUser.id,
+                targetBranchId: targetBranch,
+                fields: currentDfFields,
+                isSubmitted: false,
+                submissionData: null,
+                timestamp: new Date().toISOString()
+            };
+
+            dynamicForms.push(newForm);
+            saveToLocalStorage();
+            closeCreateFormModal();
+            renderDynamicForms();
+            showToast("تم حفظ النموذج المخصص وإرساله للجهة المحددة فوراً.", "success");
+        }
+
+        function renderDynamicForms() {
+            const receivedList = document.getElementById('received-forms-list');
+            const sentList = document.getElementById('sent-forms-list');
+
+            receivedList.innerHTML = '';
+            sentList.innerHTML = '';
+
+            const recForms = dynamicForms.filter(f => f.targetBranchId === loggedUser.branchId);
+            const senForms = dynamicForms.filter(f => f.creatorId === loggedUser.id);
+
+            document.getElementById('badge-received-forms').textContent = `${recForms.length} نموذج`;
+            document.getElementById('badge-sent-forms').textContent = `${senForms.length} مرسل`;
+
+            if (recForms.length === 0) {
+                receivedList.innerHTML = `
+                    <div class="p-6 text-center text-slate-400 text-xs">لا توجد نماذج يومية مطلوب تعبئتها حالياً.</div>
+                `;
+            } else {
+                recForms.forEach(f => {
+                    const isDone = f.isSubmitted;
+                    const statusClass = isDone ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-600";
+                    const statusText = isDone ? "تم التعبئة والإرسال" : "انتظار التعبئة اليومية";
+                    const creatorUser = users.find(u => u.id === f.creatorId);
+                    const creatorName = creatorUser ? creatorUser.name : "المركز المالي الرئيسي";
+
+                    const html = `
+                        <div class="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col justify-between gap-3 shadow-sm hover:shadow-md transition">
+                            <div>
+                                <h5 class="font-extrabold text-slate-800 text-xs leading-normal">${f.title}</h5>
+                                <div class="space-y-1 mt-2 text-[10px] text-slate-500 font-semibold">
+                                    <p><i class="fas fa-user-circle ml-1"></i>المرسل: ${creatorName}</p>
+                                    <p><i class="fas fa-clock ml-1"></i>وقت وتاريخ الإرسال: ${formatDate(f.timestamp)}</p>
+                                </div>
+                                <div class="mt-2.5">
+                                    <span class="text-[9px] px-2 py-0.5 rounded-full font-bold ${statusClass}">${statusText}</span>
+                                </div>
+                            </div>
+                            <div class="flex space-x-2 space-x-reverse pt-2 border-t border-slate-100">
+                                <button onclick="openFillFormModal('${f.id}')" class="flex-grow py-1.5 px-3 bg-indigo-900 hover:bg-indigo-950 text-white font-bold rounded-xl text-[11px] transition">
+                                    ${isDone ? 'تعديل البيانات المرسلة' : 'تعبئة المستند الآن'}
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    receivedList.insertAdjacentHTML('beforeend', html);
+                });
+            }
+
+            if (senForms.length === 0) {
+                sentList.innerHTML = `
+                    <div class="p-6 text-center text-slate-400 text-xs">لا توجد نماذج قمت بإرسالها ومتابعتها بعد.</div>
+                `;
+            } else {
+                senForms.forEach(f => {
+                    const isDone = f.isSubmitted;
+                    const statusClass = isDone ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-600";
+                    const statusText = isDone ? "مكتمل ومستلم" : "قيد المتابعة والانتظار";
+                    const targetBranch = branches.find(b => b.id === f.targetBranchId);
+                    const branchName = targetBranch ? targetBranch.name : "الفرع";
+
+                    let submitDetails = "";
+                    if (isDone && f.submissionData) {
+                        const filledBy = users.find(u => u.id === f.submissionData.submittedBy);
+                        const filledByName = filledBy ? filledBy.name : "مسؤول الفرع";
+                        submitDetails = `
+                            <p class="text-emerald-700"><i class="fas fa-check-double ml-1"></i>تمت التعبئة بواسطة: ${filledByName}</p>
+                            <p class="text-emerald-700"><i class="fas fa-calendar-check ml-1"></i>تاريخ وتوقيت التعبئة: ${formatDate(f.submissionData.submittedAt)}</p>
+                        `;
+                    } else {
+                        submitDetails = `<p class="text-amber-600"><i class="fas fa-hourglass-half ml-1"></i>بانتظار تعبئة الفرع...</p>`;
+                    }
+
+                    const html = `
+                        <div class="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 space-y-3 shadow-sm hover:shadow-md transition">
+                            <div class="flex justify-between items-start gap-2">
+                                <div>
+                                    <h5 class="font-extrabold text-slate-800 text-xs leading-normal">${f.title}</h5>
+                                    <p class="text-[10px] text-indigo-900 mt-1">الجهة المستهدفة: <strong class="text-slate-700">${branchName}</strong></p>
+                                    <p class="text-[10px] text-slate-400 mt-1"><i class="fas fa-clock ml-1"></i>تاريخ النشر: ${formatDate(f.timestamp)}</p>
+                                </div>
+                                <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${statusClass} shrink-0">${statusText}</span>
+                            </div>
+
+                            <div class="text-[9px] space-y-0.5 border-t border-slate-100 pt-2 font-bold leading-normal">
+                                ${submitDetails}
+                            </div>
+
+                            <div class="flex space-x-2 space-x-reverse pt-2 border-t border-slate-100/50">
+                                <button onclick="downloadFormResponseExcel('${f.id}')" class="flex-grow py-1.5 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold rounded-xl text-[11px] transition flex items-center justify-center space-x-1 space-x-reverse" ${!isDone ? 'disabled' : ''}>
+                                    <i class="fas fa-file-excel"></i>
+                                    <span>تحميل كملف Excel</span>
+                                </button>
+                                <button onclick="deleteSentForm('${f.id}')" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs transition">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    sentList.insertAdjacentHTML('beforeend', html);
+                });
+            }
+        }
+
+        let currentlyFillingFormId = null;
+
+        function openFillFormModal(formId) {
+            currentlyFillingFormId = formId;
+            const form = dynamicForms.find(f => f.id === formId);
+            if (!form) return;
+
+            document.getElementById('fill-form-header').textContent = `تعبئة بيانات: ${form.title}`;
+            document.getElementById('fill-form-instructions').textContent = "يرجى تعبئة الحقول المطلوبة بالأسفل بدقة تامة لإعادتها للجهة المعنية بالمركز المالي للفرع الرئيسي.";
+            
+            const container = document.getElementById('fill-form-inputs-container');
+            container.innerHTML = '';
+
+            form.fields.forEach((field, index) => {
+                const div = document.createElement('div');
+                div.className = "space-y-1";
+                div.innerHTML = `
+                    <label class="block text-xs font-bold text-slate-700">${field.name}</label>
+                    <input type="text" id="df-input-${index}" value="${field.value || ''}" required class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                `;
+                container.appendChild(div);
+            });
+
+            document.getElementById('modal-fill-form').classList.remove('hidden');
+        }
+
+        function closeFillFormModal() {
+            document.getElementById('modal-fill-form').classList.add('hidden');
+        }
+
+        function submitFilledForm() {
+            const form = dynamicForms.find(f => f.id === currentlyFillingFormId);
+            if (!form) return;
+
+            form.fields.forEach((field, index) => {
+                const inputVal = document.getElementById(`df-input-${index}`).value.trim();
+                field.value = inputVal;
+            });
+
+            form.isSubmitted = true;
+            form.submissionData = {
+                submittedBy: loggedUser.id,
+                submittedAt: new Date().toISOString()
+            };
+
+            saveToLocalStorage();
+            closeFillFormModal();
+            renderDynamicForms();
+            showToast("تم تعبئة البيانات وإرسالها للمركز الرئيسي بنجاح وبسرية تامة.", "success");
+        }
+
+        function deleteSentForm(formId) {
+            if (confirm("هل أنت متأكد من رغبتك في حذف هذا القالب؟ سيتم حذف كافة إجابات الفروع المرتبطة به.")) {
+                dynamicForms = dynamicForms.filter(f => f.id !== formId);
+                saveToLocalStorage();
+                renderDynamicForms();
+                showToast("تم حذف القالب بنجاح.", "info");
+            }
+        }
+
+        function downloadFormResponseExcel(formId) {
+            const form = dynamicForms.find(f => f.id === formId);
+            if (!form || !form.isSubmitted) {
+                showToast("البيانات غير مكتملة بعد لتصديرها.", "error");
+                return;
+            }
+
+            const targetBranch = branches.find(b => b.id === form.targetBranchId);
+            const branchName = targetBranch ? targetBranch.name : "الفرع";
+
+            const excelData = [];
+            form.fields.forEach(field => {
+                excelData.push({
+                    "الحقل": field.name,
+                    "القيمة المدخلة": field.value
+                });
+            });
+
+            excelData.push({
+                "الحقل": "تاريخ وتوقيت الإرسال",
+                "القيمة المدخلة": formatDate(form.submissionData.submittedAt)
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "التقرير اليومي");
+
+            XLSX.writeFile(workbook, `${form.title}__${branchName}.xlsx`);
+            showToast("تم تصدير التقرير بنجاح باسم الفرع.", "success");
+        }
+
+        let currentFillerFields = [];
+
+        function addFillerField() {
+            currentFillerFields.push({ placeholder: "", value: "" });
+            renderFillerFieldsBuilder();
+        }
+
+        function removeFillerField(idx) {
+            currentFillerFields.splice(idx, 1);
+            renderFillerFieldsBuilder();
+        }
+
+        function renderFillerFieldsBuilder() {
+            const container = document.getElementById('filler-fields-list');
+            container.innerHTML = '';
+
+            if (currentFillerFields.length === 0) {
+                container.innerHTML = `<p class="text-[11px] text-slate-400 text-center py-4">لا توجد حقول مضافة. الرجاء الإضافة للبدء.</p>`;
+                return;
+            }
+
+            currentFillerFields.forEach((field, idx) => {
+                const div = document.createElement('div');
+                div.className = "flex items-center space-x-2 space-x-reverse";
+                div.innerHTML = `
+                    <input type="text" value="${field.placeholder}" oninput="updateFillerPlaceholder(${idx}, this.value)" required class="flex-grow p-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="اسم مكان الحقل الفارغ بالملف الأصلي">
+                    <button type="button" onclick="removeFillerField(${idx})" class="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition"><i class="fas fa-minus-circle"></i></button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function updateFillerPlaceholder(idx, val) {
+            currentFillerFields[idx].placeholder = val;
+        }
+
+        function sendInteractiveFileTemplate() {
+            const title = document.getElementById('filler-title').value.trim();
+            const targetBranch = document.getElementById('filler-target-branch').value;
+            const fileInput = document.getElementById('filler-file-input');
+
+            if (!title) {
+                showToast("الرجاء إدخال اسم المستند التفاعلي.", "error");
+                return;
+            }
+
+            if (currentFillerFields.length === 0) {
+                showToast("الرجاء إضافة حقل واحد على الأقل لتعبئته.", "error");
+                return;
+            }
+
+            let fileName = "مستند_افتراضي.docx";
+            if (fileInput.files.length > 0) {
+                fileName = fileInput.files[0].name;
+            }
+
+            const newFiller = {
+                id: "ff_" + Date.now(),
+                title: title,
+                creatorId: loggedUser.id,
+                targetBranchId: targetBranch,
+                originalFile: fileName,
+                fields: currentFillerFields,
+                isFilled: false,
+                timestamp: new Date().toISOString()
+            };
+
+            fileFillers.push(newFiller);
+            saveToLocalStorage();
+            
+            document.getElementById('filler-title').value = '';
+            document.getElementById('filler-file-name').textContent = 'اسحب وأفلت الملف هنا أو تصفح';
+            currentFillerFields = [];
+            renderFillerFieldsBuilder();
+
+            renderFileFillers();
+            showToast("تم نشر القالب التفاعلي بنجاح وأرسل للفرع للتعبئة.", "success");
+        }
+
+        function renderFileFillers() {
+            const container = document.getElementById('filler-templates-grid');
+            container.innerHTML = '';
+
+            let viewable = [...fileFillers];
+            if (loggedUser.role !== 'مدير نظام') {
+                viewable = fileFillers.filter(f => f.targetBranchId === loggedUser.branchId || f.creatorId === loggedUser.id);
+            }
+
+            if (viewable.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full bg-slate-50 p-6 text-center rounded-2xl border border-slate-100 text-slate-400 text-xs">
+                        لا توجد مستندات تفاعلية قيد العمل حالياً.
+                    </div>
+                `;
+                return;
+            }
+
+            viewable.forEach(f => {
+                const targetBranch = branches.find(b => b.id === f.targetBranchId);
+                const branchName = targetBranch ? targetBranch.name : "الفرع";
+                const isAdmin = loggedUser.role === 'مدير نظام';
+
+                let actionHtml = '';
+                if (!f.isFilled && f.targetBranchId === loggedUser.branchId) {
+                    actionHtml = `
+                        <button onclick="openFillInteractiveModal('${f.id}')" class="py-1.5 px-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-xs transition">
+                            تعبئة وإرسال
+                        </button>
+                    `;
+                } else if (f.isFilled) {
+                    actionHtml = `
+                        <button onclick="downloadDocumentFile('${f.originalFile}', '${f.title}')" class="py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition flex items-center space-x-1 space-x-reverse">
+                            <i class="fas fa-file-download"></i>
+                            <span>تنزيل الملف المكتمل</span>
+                        </button>
+                    `;
+                } else {
+                    actionHtml = `<span class="text-xs text-amber-600 font-bold bg-amber-50 px-2 py-1 rounded-full">بانتظار رد الفرع</span>`;
+                }
+
+                const card = `
+                    <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col justify-between gap-4">
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="bg-indigo-50 text-indigo-700 text-[9px] px-2 py-0.5 rounded-full font-bold truncate max-w-[120px]">${branchName}</span>
+                                <span class="text-[9px] text-slate-400 font-bold"><i class="fas fa-clock ml-1"></i>${formatDate(f.timestamp)}</span>
+                            </div>
+                            <h4 class="font-extrabold text-slate-800 text-xs leading-normal">${f.title}</h4>
+                            <p class="text-[10px] text-slate-500 flex items-center space-x-1 space-x-reverse">
+                                <i class="fas fa-paperclip text-slate-400"></i>
+                                <span class="truncate font-bold">${f.originalFile}</span>
+                            </p>
+                        </div>
+                        <div class="flex items-center justify-between pt-2 border-t border-slate-50">
+                            ${actionHtml}
+                            ${isAdmin ? `
+                                <button onclick="deleteFillerTemplate('${f.id}')" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs transition">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', card);
+            });
+        }
+
+        let currentlyFillingInteractiveId = null;
+
+        function openFillInteractiveModal(id) {
+            currentlyFillingInteractiveId = id;
+            const item = fileFillers.find(f => f.id === id);
+            if (!item) return;
+
+            const container = document.getElementById('interactive-inputs-container');
+            container.innerHTML = '';
+
+            item.fields.forEach((field, idx) => {
+                const div = document.createElement('div');
+                div.className = "space-y-1";
+                div.innerHTML = `
+                    <label class="block text-xs font-bold text-slate-700">${field.placeholder}</label>
+                    <input type="text" id="interactive-input-${idx}" value="${field.value || ''}" class="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                `;
+                container.appendChild(div);
+            });
+
+            document.getElementById('modal-fill-interactive').classList.remove('hidden');
+        }
+
+        function closeFillInteractiveModal() {
+            document.getElementById('modal-fill-interactive').classList.add('hidden');
+        }
+
+        function submitInteractiveValues() {
+            const item = fileFillers.find(f => f.id === currentlyFillingInteractiveId);
+            if (!item) return;
+
+            item.fields.forEach((field, idx) => {
+                field.value = document.getElementById(`interactive-input-${idx}`).value.trim();
+            });
+
+            item.isFilled = true;
+            saveToLocalStorage();
+            closeFillInteractiveModal();
+            renderFileFillers();
+            showToast("تم حقن المستند الأصلي بالقيم الجديدة بنجاح وإعادته للمركز المالي.", "success");
+        }
+
+        function deleteFillerTemplate(id) {
+            if (confirm("هل أنت متأكد من رغبتك في حذف قالب المستند التفاعلي هذا؟")) {
+                fileFillers = fileFillers.filter(f => f.id !== id);
+                saveToLocalStorage();
+                renderFileFillers();
+                showToast("تم الحذف بنجاح.", "info");
+            }
+        }
+
+        function renderBranchesAndUsers() {
+            const branchCont = document.getElementById('branches-list-container');
+            branchCont.innerHTML = '';
+
+            document.getElementById('badge-branch-count').textContent = `${branches.length} فرع`;
+
+            branches.forEach(b => {
+                const isHq = b.id === 'main_hq';
+                const isAdmin = loggedUser.role === 'مدير نظام';
+
+                const div = `
+                    <div class="p-3 bg-slate-50/50 rounded-xl border border-slate-100 flex items-center justify-between shadow-sm">
+                        <div>
+                            <h5 class="font-extrabold text-slate-800 text-xs">${b.name}</h5>
+                            <p class="text-[10px] text-slate-400 mt-0.5">${b.district}</p>
+                        </div>
+                        ${(!isHq && isAdmin) ? `
+                            <button onclick="deleteBranch('${b.id}')" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition" title="حذف الفرع"><i class="fas fa-trash-alt text-xs"></i></button>
+                        ` : '<span class="text-[9px] bg-indigo-50 text-indigo-700 font-extrabold px-2 py-0.5 rounded">الرئيسي</span>'}
+                    </div>
+                `;
+                branchCont.insertAdjacentHTML('beforeend', div);
+            });
+
+            const userCont = document.getElementById('users-list-container');
+            userCont.innerHTML = '';
+
+            const isAdmin = loggedUser.role === 'مدير نظام';
+            
+            // SECURITY FILTER: Branch employees ONLY see 'مدير نظام' users. Admins see ALL users.
+            let viewableUsers = [];
+            if (isAdmin) {
+                viewableUsers = users;
+            } else {
+                viewableUsers = users.filter(u => u.role === 'مدير نظام');
+            }
+
+            document.getElementById('badge-user-count').textContent = `${viewableUsers.length} حساب`;
+
+            viewableUsers.forEach(u => {
+                const userBranch = branches.find(b => b.id === u.branchId);
+                const branchName = userBranch ? userBranch.name : "الفرع";
+                const avatarUrl = u.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150";
+
+                let credentialSection = '';
+                let actionSection = '';
+
+                if (isAdmin) {
+                    credentialSection = `
+                        <p><i class="fas fa-user-circle ml-1.5 text-indigo-900/50"></i>اسم المستخدم: <strong class="text-slate-700">${u.username}</strong></p>
+                        <p class="flex items-center"><i class="fas fa-key ml-1.5 text-indigo-900/50"></i>كلمة المرور: <span class="text-indigo-800 font-extrabold bg-indigo-50 px-1.5 py-0.2 rounded ml-1 text-[9px]">${u.passwordHash}</span></p>
+                    `;
+                    actionSection = `
+                        <div class="flex space-x-2 space-x-reverse pt-2">
+                            <button onclick="openEditUserModal('${u.id}')" class="flex-1 py-1 px-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg text-[10px] transition">تعديل البيانات</button>
+                            ${u.id !== 'u_admin' ? `
+                                <button onclick="deleteUser('${u.id}')" class="p-1 px-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-[10px] transition"><i class="fas fa-trash-alt"></i></button>
+                            ` : ''}
+                        </div>
+                    `;
+                }
+
+                // Add phone and WhatsApp direct icons
+                let contactIcons = "";
+                if (u.phone) {
+                    contactIcons += `
+                        <a href="tel:${u.phone}" class="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl transition" title="اتصال مباشر: ${u.phone}">
+                            <i class="fas fa-phone-alt"></i>
+                        </a>
+                    `;
+                }
+                if (u.whatsapp) {
+                    // Clean whatsapp number for the direct link
+                    const cleanWa = u.whatsapp.replace(/\D/g, '');
+                    contactIcons += `
+                        <a href="https://wa.me/967${cleanWa}" target="_blank" class="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-xl transition" title="مراسلة واتساب: ${u.whatsapp}">
+                            <i class="fab fa-whatsapp"></i>
+                        </a>
+                    `;
+                }
+
+                const card = `
+                    <div class="bg-slate-50/50 rounded-2xl border border-slate-100 p-4 space-y-3 relative hover:shadow-sm transition">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center space-x-3 space-x-reverse overflow-hidden">
+                                <img src="${avatarUrl}" alt="${u.name}" class="w-10 h-10 rounded-full object-cover border-2 border-indigo-200">
+                                <div class="overflow-hidden">
+                                    <h5 class="font-extrabold text-slate-800 text-xs truncate">${u.name}</h5>
+                                    <p class="text-[9px] text-indigo-700 font-semibold truncate mt-0.5">${u.title}</p>
+                                </div>
+                            </div>
+                            <!-- Contact quick actions -->
+                            <div class="flex space-x-1 space-x-reverse shrink-0">
+                                ${contactIcons}
+                            </div>
+                        </div>
+
+                        <div class="text-[10px] text-slate-500 space-y-1 pt-2 border-t border-slate-100 leading-normal">
+                            <p class="truncate"><i class="fas fa-university ml-1.5 text-indigo-900/50"></i>${branchName}</p>
+                            <p><i class="fas fa-shield-alt ml-1.5 text-indigo-900/50"></i>الصلاحية: <span class="font-bold text-slate-700">${u.role}</span></p>
+                            ${credentialSection}
+                        </div>
+
+                        ${actionSection}
+                    </div>
+                `;
+                userCont.insertAdjacentHTML('beforeend', card);
+            });
+        }
+
+        function openAddBranchModal() {
+            document.getElementById('branch-form-name').value = '';
+            document.getElementById('branch-form-district').value = '';
+            document.getElementById('modal-add-branch').classList.remove('hidden');
+        }
+
+        function closeAddBranchModal() {
+            document.getElementById('modal-add-branch').classList.add('hidden');
+        }
+
+        function handleAddBranchSubmit() {
+            const name = document.getElementById('branch-form-name').value.trim();
+            const district = document.getElementById('branch-form-district').value.trim();
+
+            if (!name || !district) {
+                showToast("الرجاء ملء كل الفراغات لإنشاء فرع جديد.", "error");
+                return;
+            }
+
+            const newBranch = {
+                id: "b_" + Date.now(),
+                name: name,
+                district: district
+            };
+
+            branches.push(newBranch);
+            saveToLocalStorage();
+            closeAddBranchModal();
+            populateBranchDropdowns();
+            renderBranchesAndUsers();
+            showToast("تم حفظ الفرع الجديد بنجاح.", "success");
+        }
+
+        function deleteBranch(id) {
+            if (confirm("هل أنت متأكد من رغبتك في حذف هذا الفرع؟ سيتم أيضاً تصفير إسناد الموظفين المرفقين به.")) {
+                branches = branches.filter(b => b.id !== id);
+                saveToLocalStorage();
+                populateBranchDropdowns();
+                renderBranchesAndUsers();
+                showToast("تم الحذف بنجاح.", "info");
+            }
+        }
+
+        function openAddUserModal() {
+            document.getElementById('user-modal-title').textContent = "إنشاء حساب موظف مسؤول جديد";
+            document.getElementById('user-form-id').value = '';
+            document.getElementById('user-form-name').value = '';
+            document.getElementById('user-form-title').value = '';
+            document.getElementById('user-form-username').value = '';
+            document.getElementById('user-form-password').value = '';
+            document.getElementById('user-form-phone').value = '';
+            document.getElementById('user-form-whatsapp').value = '';
+            document.getElementById('user-form-avatar-preview').classList.add('hidden');
+            document.getElementById('user-form-avatar-icon').classList.remove('hidden');
+            document.getElementById('modal-add-user').classList.remove('hidden');
+        }
+
+        function openEditUserModal(id) {
+            const u = users.find(user => user.id === id);
+            if (!u) return;
+
+            document.getElementById('user-modal-title').textContent = "تعديل حساب موظف مسؤول";
+            document.getElementById('user-form-id').value = u.id;
+            document.getElementById('user-form-name').value = u.name;
+            document.getElementById('user-form-title').value = u.title;
+            document.getElementById('user-form-branch').value = u.branchId;
+            document.getElementById('user-form-role').value = u.role;
+            document.getElementById('user-form-username').value = u.username;
+            document.getElementById('user-form-password').value = u.passwordHash;
+            document.getElementById('user-form-phone').value = u.phone || '';
+            document.getElementById('user-form-whatsapp').value = u.whatsapp || '';
+            
+            if (u.avatar) {
+                document.getElementById('user-form-avatar-preview').src = u.avatar;
+                document.getElementById('user-form-avatar-preview').classList.remove('hidden');
+                document.getElementById('user-form-avatar-icon').classList.add('hidden');
+            } else {
+                document.getElementById('user-form-avatar-preview').classList.add('hidden');
+                document.getElementById('user-form-avatar-icon').classList.remove('hidden');
+            }
+
+            document.getElementById('modal-add-user').classList.remove('hidden');
+        }
+
+        function closeAddUserModal() {
+            document.getElementById('modal-add-user').classList.add('hidden');
+        }
+
+        function handleAddUserSubmit() {
+            const id = document.getElementById('user-form-id').value;
+            const name = document.getElementById('user-form-name').value.trim();
+            const title = document.getElementById('user-form-title').value.trim();
+            const branchId = document.getElementById('user-form-branch').value;
+            const role = document.getElementById('user-form-role').value;
+            const username = document.getElementById('user-form-username').value.trim();
+            const password = document.getElementById('user-form-password').value;
+            const phone = document.getElementById('user-form-phone').value.trim();
+            const whatsapp = document.getElementById('user-form-whatsapp').value.trim();
+
+            if (!name || !title || !username || !password) {
+                showToast("الرجاء ملء كافة حقول الموظف لتعيين الحساب.", "error");
+                return;
+            }
+
+            const isDuplicate = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.id !== id);
+            if (isDuplicate) {
+                showToast("خطأ: اسم المستخدم هذا محجوز ومستخدم مسبقاً!", "error");
+                return;
+            }
+
+            if (id) {
+                const idx = users.findIndex(u => u.id === id);
+                if (idx !== -1) {
+                    users[idx].name = name;
+                    users[idx].title = title;
+                    users[idx].branchId = branchId;
+                    users[idx].role = role;
+                    users[idx].username = username;
+                    users[idx].passwordHash = password;
+                    users[idx].phone = phone;
+                    users[idx].whatsapp = whatsapp;
+
+                    // SECURITY SYNC: If the edited user is the loggedUser, refresh their active session
+                    if (loggedUser.id === id) {
+                        loggedUser = users[idx];
+                        // If role changed or branch changed, instantly adapt active session to avoid old branch leaks
+                        enterDashboard();
+                    }
+                }
+                showToast("تم تحديث الحساب وتعديل صلاحياته والفرع بنجاح.", "success");
+            } else {
+                const newUser = {
+                    id: "u_" + Date.now(),
+                    name: name,
+                    title: title,
+                    branchId: branchId,
+                    role: role,
+                    username: username,
+                    passwordHash: password,
+                    avatar: "",
+                    phone: phone,
+                    whatsapp: whatsapp
+                };
+                users.push(newUser);
+                showToast("تم إنشاء وتعيين الحساب الجديد بنجاح في النظام.", "success");
+            }
+
+            saveToLocalStorage();
+            closeAddUserModal();
+            renderBranchesAndUsers();
+        }
+
+        function deleteUser(id) {
+            if (confirm("هل أنت متأكد من رغبتك في حذف حساب هذا الموظف نهائياً؟")) {
+                users = users.filter(u => u.id !== id);
+                saveToLocalStorage();
+                renderBranchesAndUsers();
+                showToast("تم حذف حساب الموظف المالي بنجاح.", "info");
+            }
+        }
+
+        function requestSettingsAccess() {
+            document.getElementById('sys-lock-input').value = '';
+            document.getElementById('settings-lock-modal').classList.remove('hidden');
+        }
+
+        function closeSettingsLockModal() {
+            document.getElementById('settings-lock-modal').classList.add('hidden');
+        }
+
+        function verifySettingsPassword() {
+            const val = document.getElementById('sys-lock-input').value;
+            if (val === systemSettings.settingsPasswordHash) {
+                closeSettingsLockModal();
+                switchTab('settings');
+            } else {
+                showToast("خطأ: كلمة المرور المدخلة لقفل الإعدادات خاطئة!", "error");
+            }
+        }
+
+        function saveGlobalSettings() {
+            const name = document.getElementById('set-sys-name').value.trim();
+            const icon = document.getElementById('set-sys-icon').value;
+            const newPass = document.getElementById('set-sys-password').value;
+
+            if (!name) {
+                showToast("الرجاء إدخال اسم النظام.", "error");
+                return;
+            }
+
+            systemSettings.sysName = name;
+            systemSettings.sysIcon = icon;
+            if (newPass) {
+                systemSettings.settingsPasswordHash = newPass;
+            }
+
+            saveToLocalStorage();
+            applySettingsToUI();
+            showToast("تم حفظ الإعدادات وتطبيق الهوية بنجاح على النظام.", "success");
+        }
+
+        // --- SEND CORRESPONDENCE MODALS ---
+        function openSendDocModal() {
+            document.getElementById('doc-form-title').value = '';
+            document.getElementById('doc-form-desc').value = '';
+            document.getElementById('doc-form-file-name').textContent = 'انقر هنا لاختيار ملف (Word, Excel, PDF, صور..)';
+            document.getElementById('modal-send-doc').classList.remove('hidden');
+        }
+
+        function closeSendDocModal() {
+            document.getElementById('modal-send-doc').classList.add('hidden');
+        }
+
+        function handleSendDoc(event) {
+            event.preventDefault();
+            const tab = document.getElementById('doc-form-tab').value;
+            const target = document.getElementById('doc-form-target').value;
+            const title = document.getElementById('doc-form-title').value.trim();
+            const desc = document.getElementById('doc-form-desc').value.trim();
+            const fileInput = document.getElementById('doc-form-file');
+
+            let fileName = "ملف_صادر_وارد.docx";
+            let fileType = "docx";
+
+            if (fileInput.files.length > 0) {
+                fileName = fileInput.files[0].name;
+                const ext = fileName.split('.').pop().toLowerCase();
+                fileType = ext;
+            }
+
+            const newDoc = {
+                id: "doc_" + Date.now(),
+                tab: tab,
+                senderId: loggedUser.id,
+                receiverBranchId: target,
+                title: title,
+                desc: desc,
+                fileName: fileName,
+                fileType: fileType,
+                timestamp: new Date().toISOString(),
+                isRead: false
+            };
+
+            documents.push(newDoc);
+            saveToLocalStorage();
+            closeSendDocModal();
+            renderDocumentsList();
+            showToast("تم رفع المستند وتجهيز المراسلة بنجاح.", "success");
+        }
+
+        // --- HELPERS & UTILS ---
+        function getFileIcon(type) {
+            switch(type) {
+                case 'pdf': return 'fa-file-pdf text-rose-500';
+                case 'docx':
+                case 'doc': return 'fa-file-word text-blue-500';
+                case 'xlsx':
+                case 'xls': return 'fa-file-excel text-emerald-600';
+                case 'jpg':
+                case 'png':
+                case 'jpeg': return 'fa-file-image text-amber-500';
+                default: return 'fa-file-alt text-slate-400';
+            }
+        }
+
+        function formatDate(isoStr) {
+            if (!isoStr) return "";
+            const date = new Date(isoStr);
+            return date.toLocaleDateString('ar-YE', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function updateClock() {
+            const now = new Date();
+            const optionsTime = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+            const optionsDate = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            
+            const liveTimeEl = document.getElementById('live-time');
+            const liveDateEl = document.getElementById('live-date');
+            
+            if (liveTimeEl) liveTimeEl.textContent = now.toLocaleTimeString('ar-YE', optionsTime);
+            if (liveDateEl) liveDateEl.textContent = now.toLocaleDateString('ar-YE', optionsDate);
+        }
+
+        function downloadDocumentFile(fileName, title) {
+            const content = `نظام المراسلات لمكتب المالية تعز\nالمستند: ${title}\nاسم الملف: ${fileName}\nتم تنزيله بنجاح وأرشفته بجهازك بشكل آمن.`;
+            const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName;
+            link.click();
+            showToast(`تم تنزيل الملف المالي: ${fileName} بنجاح.`, "success");
+        }
+
+        function downloadDocumentsZip() {
+            const branchId = document.getElementById('download-branch-select').value;
+            let targetDocs = documents;
+
+            if (branchId !== 'all') {
+                targetDocs = documents.filter(d => d.receiverBranchId === branchId || d.senderId === users.find(u => u.branchId === branchId)?.id);
+            }
+
+            if (targetDocs.length === 0) {
+                showToast("لا توجد ملفات متوفرة للتصدير لهذا الفرع المحدد.", "error");
+                return;
+            }
+
+            const content = `أرشيف مكتب المالية تعز\n\nإجمالي الملفات: ${targetDocs.length} ملف.\nتم الفرز والتنزيل بنجاح في مجلدات منفصلة.`;
+            const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `أرشيف_مكتب_المالية_تعز_${branchId}.zip`;
+            link.click();
+            showToast("تم تحزيم الملفات وتنزيلها كملف مضغوط بنجاح.", "success");
+        }
+
+        function showToast(message, type = "info") {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const msg = document.getElementById('toast-message');
+
+            msg.textContent = message;
+            
+            icon.className = "fas text-lg";
+            if (type === 'success') {
+                icon.classList.add('fa-check-circle', 'text-emerald-400');
+            } else if (type === 'error') {
+                icon.classList.add('fa-exclamation-circle', 'text-rose-500');
+            } else {
+                icon.classList.add('fa-info-circle', 'text-amber-400');
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 4000);
+        }
+
+        // On Load Trigger
+        window.onload = function() {
+            initApp();
+            
+            document.getElementById('doc-form-file').addEventListener('change', function(e) {
+                if(e.target.files.length > 0) {
+                    document.getElementById('doc-form-file-name').textContent = e.target.files[0].name;
+                }
+            });
+
+            document.getElementById('filler-file-input').addEventListener('change', function(e) {
+                if(e.target.files.length > 0) {
+                    document.getElementById('filler-file-name').textContent = e.target.files[0].name;
+                }
+            });
+        };
+    </script>
+</body>
+</html>
