@@ -5,15 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>نظام المراسلات الإلكتروني - مكتب المالية بمحافظة تعز</title>
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts (Cairo) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-    <!-- SheetJS for Excel Export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Font Awesome Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- Google Fonts (Cairo) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+<!-- SheetJS for Excel Export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<!-- استيراد SDK الخاص بـ Supabase من خادم CDN السريع -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+// تعريف الاتصال بالخادم السحابي
+const supabaseUrl = 'YOUR_SUPABASE_PROJECT_URL'; // رابط مشروعك
+const supabaseKey = 'YOUR_SUPABASE_ANON_KEY';    // المفتاح العام
+
+const supabase = supabaseJs.createClient(supabaseUrl, supabaseKey);
+
+// مثال بسيط لجلب الوثائق بمرونة مع تطبيق سياسات الصلاحيات تلقائياً:
+async function fetchDocumentsFromCloud() {
+    let query = supabase.from('documents').select('*');
+    
+    // إذا كان الموظف ليس مديراً، يتم فلتراسيون للنتائج لفرعه الخاص فقط
+    if (loggedUser.role !== 'مدير نظام') {
+        query = query.or(`receiver_branch_id.eq.${loggedUser.branchId},sender_id.eq.${loggedUser.id}`);
+    }
+    
+    const { data, error } = await query;
+
+    if (!error) {
+        documents = data;
+        renderDocumentsList();
+    }
+}
+</script>
     <style>
         body {
             font-family: 'Cairo', sans-serif;
