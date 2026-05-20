@@ -22,28 +22,12 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
-// تعريف الاتصال بالخادم السحابي
-const supabaseUrl = 'https://kgloexzzrjivbhoeeeof.supabase.co'; // رابط مشروعك
-const supabaseKey = 'sb_publishable_N2I3fjg9A5MJ8WH_xHcflw_SIe7Blxh';    // المفتاح العام
-
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// استبدل الرابط والمفتاح بالقيم الخاصة بمشروع Supabase
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+const supabaseUrl = 'https://rpvlqiautlhnezjsodwd.supabase.co';
+const supabaseKey = 'sb_publishable_DuOcI1uigYQLBYWrv3Pn7g_8IZ2Udn6';
 const supabase = supabaseJs.createClient(supabaseUrl, supabaseKey);
-
-// مثال بسيط لجلب الوثائق بمرونة مع تطبيق سياسات الصلاحيات تلقائياً:
-async function fetchDocumentsFromCloud() {
-    let query = supabase.from('documents').select('*');
-    
-    // إذا كان الموظف ليس مديراً، يتم فلتراسيون للنتائج لفرعه الخاص فقط
-    if (loggedUser.role !== 'مدير نظام') {
-        query = query.or(`receiver_branch_id.eq.${loggedUser.branchId},sender_id.eq.${loggedUser.id}`);
-    }
-    
-    const { data, error } = await query;
-
-    if (!error) {
-        documents = data;
-        renderDocumentsList();
-    }
-}
 </script>
     <style>
         body {
@@ -971,14 +955,14 @@ async function fetchDocumentsFromCloud() {
         let activeTab = 'overview';
         let currentDocFilter = 'all';
 
-        // Core Data Collections
+        // Core Data Collections (used for local rendering, synced with Supabase)
         let branches = [];
         let users = [];
         let documents = [];
         let dynamicForms = [];
         let fileFillers = [];
 
-        // Prepopulate data mock to make app fully responsive instantly on load
+        // Prepopulate data mock (used only when tables are empty)
         const defaultBranches = [
             { id: "main_hq", name: "المركز الرئيسي بمكتب المالية تعز", district: "وسط المدينة" },
             { id: "alqahera_br", name: "فرع مديرية القاهرة", district: "القاهرة" },
@@ -1033,27 +1017,19 @@ async function fetchDocumentsFromCloud() {
             }
         ];
 
-        function initApp() {
-            if (localStorage.getItem('finance_branches')) {
-                branches = JSON.parse(localStorage.getItem('finance_branches'));
-                users = JSON.parse(localStorage.getItem('finance_users'));
-                documents = JSON.parse(localStorage.getItem('finance_documents'));
-                dynamicForms = JSON.parse(localStorage.getItem('finance_dynamic_forms'));
-                fileFillers = JSON.parse(localStorage.getItem('finance_file_fillers'));
+        // ========================
+        // INIT: Load all data from Supabase (replaces localStorage)
+        // ========================
+        async function initApp() {
+            // Load system settings from localStorage (settings remain local)
+            if (localStorage.getItem('finance_settings')) {
                 systemSettings = JSON.parse(localStorage.getItem('finance_settings'));
-            } else {
-                branches = defaultBranches;
-                users = defaultUsers;
-                documents = defaultDocs;
-                dynamicForms = defaultDynamicForms;
-                fileFillers = defaultFileFillers;
-                saveToLocalStorage();
             }
 
-            // Sync Settings UI
-            applySettingsToUI();
+            // Fetch data from Supabase
+            await loadAllDataFromSupabase();
 
-            // Setup clock
+            applySettingsToUI();
             updateClock();
             setInterval(updateClock, 1000);
 
@@ -1061,13 +1037,51 @@ async function fetchDocumentsFromCloud() {
             document.getElementById('dashboard-screen').classList.add('hidden');
         }
 
-        function saveToLocalStorage() {
-            localStorage.setItem('finance_branches', JSON.stringify(branches));
-            localStorage.setItem('finance_users', JSON.stringify(users));
-            localStorage.setItem('finance_documents', JSON.stringify(documents));
-            localStorage.setItem('finance_dynamic_forms', JSON.stringify(dynamicForms));
-            localStorage.setItem('finance_file_fillers', JSON.stringify(fileFillers));
-            localStorage.setItem('finance_settings', JSON.stringify(systemSettings));
+        async function loadAllDataFromSupabase() {
+            // Fetch branches
+            let { data: branchesData } = await supabase.from('branches').select('*');
+            if (branchesData && branchesData.length) {
+                branches = branchesData;
+            } else {
+                branches = defaultBranches;
+                await supabase.from('branches').insert(defaultBranches);
+            }
+
+            // Fetch users
+            let { data: usersData } = await supabase.from('users').select('*');
+            if (usersData && usersData.length) {
+                users = usersData;
+            } else {
+                users = defaultUsers;
+                await supabase.from('users').insert(defaultUsers);
+            }
+
+            // Fetch documents
+            let { data: docsData } = await supabase.from('documents').select('*');
+            if (docsData && docsData.length) {
+                documents = docsData;
+            } else {
+                documents = defaultDocs;
+                await supabase.from('documents').insert(defaultDocs);
+            }
+
+            // Fetch dynamic forms
+            let { data: formsData } = await supabase.from('dynamic_forms').select('*');
+            if (formsData && formsData.length) {
+                dynamicForms = formsData;
+            } else {
+                dynamicForms = defaultDynamicForms;
+                await supabase.from('dynamic_forms').insert(defaultDynamicForms);
+            }
+
+            // Fetch file fillers
+            let { data: fillersData } = await supabase.from('file_fillers').select('*');
+            if (fillersData && fillersData.length) {
+                fileFillers = fillersData;
+            } else {
+                fileFillers = defaultFileFillers;
+                await supabase.from('file_fillers').insert(defaultFileFillers);
+            }
         }
 
         function applySettingsToUI() {
@@ -1084,12 +1098,20 @@ async function fetchDocumentsFromCloud() {
             document.getElementById('set-sys-icon').value = systemSettings.sysIcon;
         }
 
-        function handleLogin(event) {
+        // ========================
+        // LOGIN: Now validates against Supabase users table
+        // ========================
+        async function handleLogin(event) {
             event.preventDefault();
             const uInput = document.getElementById('login-username').value.trim();
             const pInput = document.getElementById('login-password').value;
 
-            const matchedUser = users.find(u => u.username.toLowerCase() === uInput.toLowerCase() && u.passwordHash === pInput);
+            const { data: matchedUser, error } = await supabase
+                .from('users')
+                .select('*')
+                .eq('username', uInput.toLowerCase())
+                .eq('passwordHash', pInput)
+                .single();
 
             if (matchedUser) {
                 loggedUser = matchedUser;
@@ -1120,19 +1142,15 @@ async function fetchDocumentsFromCloud() {
             const isAdmin = loggedUser.role === 'مدير نظام';
 
             if (!isAdmin) {
-                // Securely hide settings nav and creation features
                 document.getElementById('admin-menu-header').classList.add('hidden');
                 document.getElementById('nav-settings').classList.add('hidden');
                 document.getElementById('btn-create-form').classList.add('hidden');
-                
-                // Block creation and adjustment panels in branch management
                 document.getElementById('admin-branches-actions').classList.add('hidden');
                 document.getElementById('manage-branches-title').textContent = "دليل الموظفين والفروع";
                 document.getElementById('manage-branches-desc').textContent = "دليل التواصل الموحد بأسماء مدراء النظام بمكتب المالية تعز بمختلف المديريات.";
                 document.getElementById('personnel-header-title').textContent = "قائمة مدراء النظام للتواصل";
                 document.getElementById('nav-branches-text').textContent = "دليل تواصل الإدارة";
             } else {
-                // Reveal full settings and adjustments for administrators
                 document.getElementById('admin-menu-header').classList.remove('hidden');
                 document.getElementById('nav-settings').classList.remove('hidden');
                 document.getElementById('btn-create-form').classList.remove('hidden');
@@ -1160,7 +1178,6 @@ async function fetchDocumentsFromCloud() {
         }
 
         function switchTab(tabName) {
-            // Strict role guard check for Settings page access
             if (tabName === 'settings' && loggedUser.role !== 'مدير نظام') {
                 showToast("عذراً، لا تمتلك الصلاحيات الكافية للوصول إلى هذه الصفحة.", "error");
                 switchTab('overview');
@@ -1169,20 +1186,17 @@ async function fetchDocumentsFromCloud() {
 
             activeTab = tabName;
             
-            // Hide all tab containers
             const tabs = ['overview', 'documents', 'dynamic-forms', 'file-filler', 'manage-branches', 'settings'];
             tabs.forEach(t => {
                 const element = document.getElementById(`tab-${t}`);
                 if (element) element.classList.add('hidden');
                 
-                // Adjust nav styles
                 const navBtn = document.getElementById(`nav-${t}`);
                 if (navBtn) {
                     navBtn.className = "w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition font-semibold text-sm hover:bg-slate-800 hover:text-white text-slate-400";
                 }
             });
 
-            // Show target
             const targetTab = document.getElementById(`tab-${tabName}`);
             if (targetTab) targetTab.classList.remove('hidden');
             
@@ -1191,7 +1205,6 @@ async function fetchDocumentsFromCloud() {
                 activeNav.className = "w-full flex items-center space-x-3 space-x-reverse px-4 py-3 rounded-xl transition font-semibold text-sm bg-indigo-900 text-white shadow-md";
             }
 
-            // Set Header Text
             const pageTitles = {
                 overview: "الرئيسية والإحصائيات",
                 documents: "المراسلات والوثائق المؤرشفة",
@@ -1202,7 +1215,6 @@ async function fetchDocumentsFromCloud() {
             };
             document.getElementById('current-page-title').textContent = pageTitles[tabName];
 
-            // Trigger data reloading
             renderCurrentTabData(tabName);
         }
 
@@ -1222,18 +1234,10 @@ async function fetchDocumentsFromCloud() {
             }
         }
 
-        function openChangePasswordModal() {
-            document.getElementById('change-pass-current').value = '';
-            document.getElementById('change-pass-new').value = '';
-            document.getElementById('change-pass-confirm').value = '';
-            document.getElementById('modal-change-password').classList.remove('hidden');
-        }
-
-        function closeChangePasswordModal() {
-            document.getElementById('modal-change-password').classList.add('hidden');
-        }
-
-        function submitChangePassword() {
+        // ========================
+        // CHANGE PASSWORD (updates Supabase)
+        // ========================
+        async function submitChangePassword() {
             const currentPass = document.getElementById('change-pass-current').value;
             const newPass = document.getElementById('change-pass-new').value;
             const confirmPass = document.getElementById('change-pass-confirm').value;
@@ -1258,16 +1262,27 @@ async function fetchDocumentsFromCloud() {
                 return;
             }
 
-            const userIndex = users.findIndex(u => u.id === loggedUser.id);
-            if (userIndex !== -1) {
-                users[userIndex].passwordHash = newPass;
-                loggedUser.passwordHash = newPass;
-                saveToLocalStorage();
-                closeChangePasswordModal();
-                showToast("تم تحديث كلمة المرور الخاصة بك بنجاح.", "success");
+            const { error } = await supabase
+                .from('users')
+                .update({ passwordHash: newPass })
+                .eq('id', loggedUser.id);
+
+            if (error) {
+                showToast("فشل تحديث كلمة المرور في السحابة.", "error");
+                return;
             }
+
+            loggedUser.passwordHash = newPass;
+            const userIndex = users.findIndex(u => u.id === loggedUser.id);
+            if (userIndex !== -1) users[userIndex].passwordHash = newPass;
+
+            closeChangePasswordModal();
+            showToast("تم تحديث كلمة المرور الخاصة بك بنجاح.", "success");
         }
 
+        // ========================
+        // STATS & HELPERS (unchanged logic)
+        // ========================
         function updateLiveStats() {
             let viewableDocs = documents;
             let receivedCount = 0;
@@ -1276,7 +1291,6 @@ async function fetchDocumentsFromCloud() {
             const isAdmin = loggedUser.role === 'مدير نظام';
 
             if (!isAdmin) {
-                // Only view documents belonging strictly to their branch or sent by them
                 viewableDocs = documents.filter(d => d.receiverBranchId === loggedUser.branchId || d.senderId === loggedUser.id);
                 receivedCount = documents.filter(d => d.receiverBranchId === loggedUser.branchId).length;
                 sentCount = documents.filter(d => d.senderId === loggedUser.id).length;
@@ -1322,7 +1336,6 @@ async function fetchDocumentsFromCloud() {
                 select.innerHTML = '';
                 
                 branches.forEach(b => {
-                    // Branch employees can message any branch but themselves
                     if (!isAdmin && select.id === 'doc-form-target') {
                         if (b.id !== loggedUser.branchId) {
                             const opt = document.createElement('option');
@@ -1331,7 +1344,6 @@ async function fetchDocumentsFromCloud() {
                             select.appendChild(opt);
                         }
                     } else {
-                        // Admins can select any branch
                         const opt = document.createElement('option');
                         opt.value = b.id;
                         opt.textContent = b.name;
@@ -1510,15 +1522,70 @@ async function fetchDocumentsFromCloud() {
             renderDocumentsList();
         }
 
-        function deleteDocument(docId) {
+        // ========================
+        // SEND DOCUMENT (Supabase insert)
+        // ========================
+        async function handleSendDoc(event) {
+            event.preventDefault();
+            const tab = document.getElementById('doc-form-tab').value;
+            const target = document.getElementById('doc-form-target').value;
+            const title = document.getElementById('doc-form-title').value.trim();
+            const desc = document.getElementById('doc-form-desc').value.trim();
+            const fileInput = document.getElementById('doc-form-file');
+
+            let fileName = "ملف_صادر_وارد.docx";
+            let fileType = "docx";
+
+            if (fileInput.files.length > 0) {
+                fileName = fileInput.files[0].name;
+                const ext = fileName.split('.').pop().toLowerCase();
+                fileType = ext;
+            }
+
+            const newDoc = {
+                id: "doc_" + Date.now(),
+                tab: tab,
+                senderId: loggedUser.id,
+                receiverBranchId: target,
+                title: title,
+                desc: desc,
+                fileName: fileName,
+                fileType: fileType,
+                timestamp: new Date().toISOString(),
+                isRead: false
+            };
+
+            const { error } = await supabase.from('documents').insert([newDoc]);
+            if (error) {
+                showToast("فشل حفظ المستند في السحابة: " + error.message, "error");
+                return;
+            }
+
+            documents.push(newDoc);
+            closeSendDocModal();
+            renderDocumentsList();
+            showToast("تم رفع المستند وتجهيز المراسلة بنجاح.", "success");
+        }
+
+        // ========================
+        // DELETE DOCUMENT (Supabase delete)
+        // ========================
+        async function deleteDocument(docId) {
             if (confirm("هل أنت متأكد من رغبتك في حذف هذا المستند نهائياً من الأرشيف؟")) {
+                const { error } = await supabase.from('documents').delete().eq('id', docId);
+                if (error) {
+                    showToast("فشل الحذف: " + error.message, "error");
+                    return;
+                }
                 documents = documents.filter(d => d.id !== docId);
-                saveToLocalStorage();
                 renderDocumentsList();
                 showToast("تم حذف المستند بنجاح.", "info");
             }
         }
 
+        // ========================
+        // DYNAMIC FORMS MANAGEMENT (Supabase inserts/updates)
+        // ========================
         let currentDfFields = [];
 
         function openCreateFormModal() {
@@ -1560,7 +1627,7 @@ async function fetchDocumentsFromCloud() {
             currentDfFields[index].name = val;
         }
 
-        function handleCreateFormSubmit() {
+        async function handleCreateFormSubmit() {
             const title = document.getElementById('df-title').value.trim();
             const targetBranch = document.getElementById('df-target-branch').value;
 
@@ -1585,8 +1652,13 @@ async function fetchDocumentsFromCloud() {
                 timestamp: new Date().toISOString()
             };
 
+            const { error } = await supabase.from('dynamic_forms').insert([newForm]);
+            if (error) {
+                showToast("فشل حفظ النموذج: " + error.message, "error");
+                return;
+            }
+
             dynamicForms.push(newForm);
-            saveToLocalStorage();
             closeCreateFormModal();
             renderDynamicForms();
             showToast("تم حفظ النموذج المخصص وإرساله للجهة المحددة فوراً.", "success");
@@ -1725,7 +1797,7 @@ async function fetchDocumentsFromCloud() {
             document.getElementById('modal-fill-form').classList.add('hidden');
         }
 
-        function submitFilledForm() {
+        async function submitFilledForm() {
             const form = dynamicForms.find(f => f.id === currentlyFillingFormId);
             if (!form) return;
 
@@ -1740,16 +1812,33 @@ async function fetchDocumentsFromCloud() {
                 submittedAt: new Date().toISOString()
             };
 
-            saveToLocalStorage();
+            const { error } = await supabase
+                .from('dynamic_forms')
+                .update({
+                    fields: form.fields,
+                    isSubmitted: true,
+                    submissionData: form.submissionData
+                })
+                .eq('id', form.id);
+
+            if (error) {
+                showToast("فشل حفظ التعبئة: " + error.message, "error");
+                return;
+            }
+
             closeFillFormModal();
             renderDynamicForms();
             showToast("تم تعبئة البيانات وإرسالها للمركز الرئيسي بنجاح وبسرية تامة.", "success");
         }
 
-        function deleteSentForm(formId) {
+        async function deleteSentForm(formId) {
             if (confirm("هل أنت متأكد من رغبتك في حذف هذا القالب؟ سيتم حذف كافة إجابات الفروع المرتبطة به.")) {
+                const { error } = await supabase.from('dynamic_forms').delete().eq('id', formId);
+                if (error) {
+                    showToast("فشل الحذف: " + error.message, "error");
+                    return;
+                }
                 dynamicForms = dynamicForms.filter(f => f.id !== formId);
-                saveToLocalStorage();
                 renderDynamicForms();
                 showToast("تم حذف القالب بنجاح.", "info");
             }
@@ -1786,6 +1875,9 @@ async function fetchDocumentsFromCloud() {
             showToast("تم تصدير التقرير بنجاح باسم الفرع.", "success");
         }
 
+        // ========================
+        // INTERACTIVE FILE FILLER (Supabase)
+        // ========================
         let currentFillerFields = [];
 
         function addFillerField() {
@@ -1822,7 +1914,7 @@ async function fetchDocumentsFromCloud() {
             currentFillerFields[idx].placeholder = val;
         }
 
-        function sendInteractiveFileTemplate() {
+        async function sendInteractiveFileTemplate() {
             const title = document.getElementById('filler-title').value.trim();
             const targetBranch = document.getElementById('filler-target-branch').value;
             const fileInput = document.getElementById('filler-file-input');
@@ -1853,8 +1945,13 @@ async function fetchDocumentsFromCloud() {
                 timestamp: new Date().toISOString()
             };
 
+            const { error } = await supabase.from('file_fillers').insert([newFiller]);
+            if (error) {
+                showToast("فشل حفظ القالب التفاعلي: " + error.message, "error");
+                return;
+            }
+
             fileFillers.push(newFiller);
-            saveToLocalStorage();
             
             document.getElementById('filler-title').value = '';
             document.getElementById('filler-file-name').textContent = 'اسحب وأفلت الملف هنا أو تصفح';
@@ -1960,7 +2057,7 @@ async function fetchDocumentsFromCloud() {
             document.getElementById('modal-fill-interactive').classList.add('hidden');
         }
 
-        function submitInteractiveValues() {
+        async function submitInteractiveValues() {
             const item = fileFillers.find(f => f.id === currentlyFillingInteractiveId);
             if (!item) return;
 
@@ -1969,21 +2066,41 @@ async function fetchDocumentsFromCloud() {
             });
 
             item.isFilled = true;
-            saveToLocalStorage();
+
+            const { error } = await supabase
+                .from('file_fillers')
+                .update({
+                    fields: item.fields,
+                    isFilled: true
+                })
+                .eq('id', item.id);
+
+            if (error) {
+                showToast("فشل حفظ التعبئة التفاعلية: " + error.message, "error");
+                return;
+            }
+
             closeFillInteractiveModal();
             renderFileFillers();
             showToast("تم حقن المستند الأصلي بالقيم الجديدة بنجاح وإعادته للمركز المالي.", "success");
         }
 
-        function deleteFillerTemplate(id) {
+        async function deleteFillerTemplate(id) {
             if (confirm("هل أنت متأكد من رغبتك في حذف قالب المستند التفاعلي هذا؟")) {
+                const { error } = await supabase.from('file_fillers').delete().eq('id', id);
+                if (error) {
+                    showToast("فشل الحذف: " + error.message, "error");
+                    return;
+                }
                 fileFillers = fileFillers.filter(f => f.id !== id);
-                saveToLocalStorage();
                 renderFileFillers();
                 showToast("تم الحذف بنجاح.", "info");
             }
         }
 
+        // ========================
+        // BRANCHES MANAGEMENT (Supabase)
+        // ========================
         function renderBranchesAndUsers() {
             const branchCont = document.getElementById('branches-list-container');
             branchCont.innerHTML = '';
@@ -2013,7 +2130,6 @@ async function fetchDocumentsFromCloud() {
 
             const isAdmin = loggedUser.role === 'مدير نظام';
             
-            // SECURITY FILTER: Branch employees ONLY see 'مدير نظام' users. Admins see ALL users.
             let viewableUsers = [];
             if (isAdmin) {
                 viewableUsers = users;
@@ -2046,7 +2162,6 @@ async function fetchDocumentsFromCloud() {
                     `;
                 }
 
-                // Add phone and WhatsApp direct icons
                 let contactIcons = "";
                 if (u.phone) {
                     contactIcons += `
@@ -2056,7 +2171,6 @@ async function fetchDocumentsFromCloud() {
                     `;
                 }
                 if (u.whatsapp) {
-                    // Clean whatsapp number for the direct link
                     const cleanWa = u.whatsapp.replace(/\D/g, '');
                     contactIcons += `
                         <a href="https://wa.me/967${cleanWa}" target="_blank" class="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-xl transition" title="مراسلة واتساب: ${u.whatsapp}">
@@ -2075,7 +2189,6 @@ async function fetchDocumentsFromCloud() {
                                     <p class="text-[9px] text-indigo-700 font-semibold truncate mt-0.5">${u.title}</p>
                                 </div>
                             </div>
-                            <!-- Contact quick actions -->
                             <div class="flex space-x-1 space-x-reverse shrink-0">
                                 ${contactIcons}
                             </div>
@@ -2104,7 +2217,7 @@ async function fetchDocumentsFromCloud() {
             document.getElementById('modal-add-branch').classList.add('hidden');
         }
 
-        function handleAddBranchSubmit() {
+        async function handleAddBranchSubmit() {
             const name = document.getElementById('branch-form-name').value.trim();
             const district = document.getElementById('branch-form-district').value.trim();
 
@@ -2119,18 +2232,27 @@ async function fetchDocumentsFromCloud() {
                 district: district
             };
 
+            const { error } = await supabase.from('branches').insert([newBranch]);
+            if (error) {
+                showToast("فشل حفظ الفرع: " + error.message, "error");
+                return;
+            }
+
             branches.push(newBranch);
-            saveToLocalStorage();
             closeAddBranchModal();
             populateBranchDropdowns();
             renderBranchesAndUsers();
             showToast("تم حفظ الفرع الجديد بنجاح.", "success");
         }
 
-        function deleteBranch(id) {
+        async function deleteBranch(id) {
             if (confirm("هل أنت متأكد من رغبتك في حذف هذا الفرع؟ سيتم أيضاً تصفير إسناد الموظفين المرفقين به.")) {
+                const { error } = await supabase.from('branches').delete().eq('id', id);
+                if (error) {
+                    showToast("فشل حذف الفرع: " + error.message, "error");
+                    return;
+                }
                 branches = branches.filter(b => b.id !== id);
-                saveToLocalStorage();
                 populateBranchDropdowns();
                 renderBranchesAndUsers();
                 showToast("تم الحذف بنجاح.", "info");
@@ -2182,7 +2304,7 @@ async function fetchDocumentsFromCloud() {
             document.getElementById('modal-add-user').classList.add('hidden');
         }
 
-        function handleAddUserSubmit() {
+        async function handleAddUserSubmit() {
             const id = document.getElementById('user-form-id').value;
             const name = document.getElementById('user-form-name').value.trim();
             const title = document.getElementById('user-form-title').value.trim();
@@ -2205,56 +2327,61 @@ async function fetchDocumentsFromCloud() {
             }
 
             if (id) {
+                // Update existing user
+                const userData = {
+                    name, title, branchId, role, username, passwordHash: password, phone, whatsapp
+                };
+                const { error } = await supabase.from('users').update(userData).eq('id', id);
+                if (error) {
+                    showToast("فشل تحديث الحساب: " + error.message, "error");
+                    return;
+                }
+
                 const idx = users.findIndex(u => u.id === id);
                 if (idx !== -1) {
-                    users[idx].name = name;
-                    users[idx].title = title;
-                    users[idx].branchId = branchId;
-                    users[idx].role = role;
-                    users[idx].username = username;
-                    users[idx].passwordHash = password;
-                    users[idx].phone = phone;
-                    users[idx].whatsapp = whatsapp;
+                    users[idx] = { ...users[idx], ...userData };
+                }
 
-                    // SECURITY SYNC: If the edited user is the loggedUser, refresh their active session
-                    if (loggedUser.id === id) {
-                        loggedUser = users[idx];
-                        // If role changed or branch changed, instantly adapt active session to avoid old branch leaks
-                        enterDashboard();
-                    }
+                if (loggedUser.id === id) {
+                    loggedUser = users[idx];
+                    enterDashboard();
                 }
                 showToast("تم تحديث الحساب وتعديل صلاحياته والفرع بنجاح.", "success");
             } else {
+                // Create new user
                 const newUser = {
                     id: "u_" + Date.now(),
-                    name: name,
-                    title: title,
-                    branchId: branchId,
-                    role: role,
-                    username: username,
-                    passwordHash: password,
-                    avatar: "",
-                    phone: phone,
-                    whatsapp: whatsapp
+                    name, title, branchId, role, username, passwordHash: password, avatar: "", phone, whatsapp
                 };
+                const { error } = await supabase.from('users').insert([newUser]);
+                if (error) {
+                    showToast("فشل إنشاء الحساب: " + error.message, "error");
+                    return;
+                }
                 users.push(newUser);
                 showToast("تم إنشاء وتعيين الحساب الجديد بنجاح في النظام.", "success");
             }
 
-            saveToLocalStorage();
             closeAddUserModal();
             renderBranchesAndUsers();
         }
 
-        function deleteUser(id) {
+        async function deleteUser(id) {
             if (confirm("هل أنت متأكد من رغبتك في حذف حساب هذا الموظف نهائياً؟")) {
+                const { error } = await supabase.from('users').delete().eq('id', id);
+                if (error) {
+                    showToast("فشل حذف المستخدم: " + error.message, "error");
+                    return;
+                }
                 users = users.filter(u => u.id !== id);
-                saveToLocalStorage();
                 renderBranchesAndUsers();
                 showToast("تم حذف حساب الموظف المالي بنجاح.", "info");
             }
         }
 
+        // ========================
+        // SETTINGS (still localStorage, not Supabase)
+        // ========================
         function requestSettingsAccess() {
             document.getElementById('sys-lock-input').value = '';
             document.getElementById('settings-lock-modal').classList.remove('hidden');
@@ -2290,58 +2417,9 @@ async function fetchDocumentsFromCloud() {
                 systemSettings.settingsPasswordHash = newPass;
             }
 
-            saveToLocalStorage();
+            localStorage.setItem('finance_settings', JSON.stringify(systemSettings));
             applySettingsToUI();
             showToast("تم حفظ الإعدادات وتطبيق الهوية بنجاح على النظام.", "success");
-        }
-
-        // --- SEND CORRESPONDENCE MODALS ---
-        function openSendDocModal() {
-            document.getElementById('doc-form-title').value = '';
-            document.getElementById('doc-form-desc').value = '';
-            document.getElementById('doc-form-file-name').textContent = 'انقر هنا لاختيار ملف (Word, Excel, PDF, صور..)';
-            document.getElementById('modal-send-doc').classList.remove('hidden');
-        }
-
-        function closeSendDocModal() {
-            document.getElementById('modal-send-doc').classList.add('hidden');
-        }
-
-        function handleSendDoc(event) {
-            event.preventDefault();
-            const tab = document.getElementById('doc-form-tab').value;
-            const target = document.getElementById('doc-form-target').value;
-            const title = document.getElementById('doc-form-title').value.trim();
-            const desc = document.getElementById('doc-form-desc').value.trim();
-            const fileInput = document.getElementById('doc-form-file');
-
-            let fileName = "ملف_صادر_وارد.docx";
-            let fileType = "docx";
-
-            if (fileInput.files.length > 0) {
-                fileName = fileInput.files[0].name;
-                const ext = fileName.split('.').pop().toLowerCase();
-                fileType = ext;
-            }
-
-            const newDoc = {
-                id: "doc_" + Date.now(),
-                tab: tab,
-                senderId: loggedUser.id,
-                receiverBranchId: target,
-                title: title,
-                desc: desc,
-                fileName: fileName,
-                fileType: fileType,
-                timestamp: new Date().toISOString(),
-                isRead: false
-            };
-
-            documents.push(newDoc);
-            saveToLocalStorage();
-            closeSendDocModal();
-            renderDocumentsList();
-            showToast("تم رفع المستند وتجهيز المراسلة بنجاح.", "success");
         }
 
         // --- HELPERS & UTILS ---
