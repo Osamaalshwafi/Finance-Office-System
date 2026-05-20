@@ -18,7 +18,7 @@
 <!-- SheetJS for Excel Export -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-<!-- استيراد SDK الخاص بـ Supabase من خادم CDN السريع -->
+<!-- Supabase SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
@@ -970,7 +970,6 @@ const supabase = supabase.createClient(supabaseUrl, supabaseKey);
             { id: "salah_br", name: "فرع مديرية صالة", district: "صالة" }
         ];
 
-        // Setup admins and branch personnel with phone & whatsapp info
         const defaultUsers = [
             { id: "u_admin", name: "أ. ماجد السامعي", title: "مدير عام مكتب المالية تعز", branchId: "main_hq", role: "مدير نظام", username: "admin", passwordHash: "123456", avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=150&h=150", phone: "777000111", whatsapp: "777000111" },
             { id: "u_admin2", name: "أ. عبدالرقيب المقطري", title: "مدير مساعد - المركز الرئيسي", branchId: "main_hq", role: "مدير نظام", username: "admin2", passwordHash: "123456", avatar: "", phone: "733222333", whatsapp: "733222333" },
@@ -979,8 +978,8 @@ const supabase = supabase.createClient(supabaseUrl, supabaseKey);
         ];
 
         const defaultDocs = [
-            { id: "doc1", tab: "قرارات", senderId: "u_admin", receiverBranchId: "alqahera_br", title: "قرار إداري رقم 15 بشأن تسريع صرف نفقات النظافة والتحسين", desc: "يرجى من فرع القاهرة الاستلام والعمل فوراً بما جاء في بنود القرار.", fileName: "قرار_المالية_رقم_15.pdf", fileType: "pdf", timestamp: "2026-05-18T10:30:00.000Z", isRead: false },
-            { id: "doc2", tab: "استمارات", senderId: "u_user1", receiverBranchId: "main_hq", title: "استمارة 50 مكرر الخاصة بميزانية مكاتب المديرية الربع السنوية", desc: "مرفق لكم الاستمارة المستكملة بالتوقيعات والأختام القانونية للمراجعة.", fileName: "استمارة_ميزانية_صالة_الربع_الأول.xlsx", fileType: "xlsx", timestamp: "2026-05-19T01:15:00.000Z", isRead: false }
+            { id: "doc1", tab: "قرارات", senderId: "u_admin", receiverBranchId: "alqahera_br", title: "قرار إداري رقم 15 بشأن تسريع صرف نفقات النظافة والتحسين", description: "يرجى من فرع القاهرة الاستلام والعمل فوراً بما جاء في بنود القرار.", fileName: "قرار_المالية_رقم_15.pdf", fileType: "pdf", timestamp: "2026-05-18T10:30:00.000Z", isRead: false },
+            { id: "doc2", tab: "استمارات", senderId: "u_user1", receiverBranchId: "main_hq", title: "استمارة 50 مكرر الخاصة بميزانية مكاتب المديرية الربع السنوية", description: "مرفق لكم الاستمارة المستكملة بالتوقيعات والأختام القانونية للمراجعة.", fileName: "استمارة_ميزانية_صالة_الربع_الأول.xlsx", fileType: "xlsx", timestamp: "2026-05-19T01:15:00.000Z", isRead: false }
         ];
 
         const defaultDynamicForms = [
@@ -1038,49 +1037,54 @@ const supabase = supabase.createClient(supabaseUrl, supabaseKey);
         }
 
         async function loadAllDataFromSupabase() {
-            // Fetch branches
-            let { data: branchesData } = await supabase.from('branches').select('*');
-            if (branchesData && branchesData.length) {
-                branches = branchesData;
-            } else {
-                branches = defaultBranches;
-                await supabase.from('branches').insert(defaultBranches);
-            }
+            try {
+                // Fetch branches
+                let { data: branchesData } = await supabase.from('branches').select('*');
+                if (branchesData && branchesData.length) {
+                    branches = branchesData;
+                } else {
+                    branches = defaultBranches;
+                    await supabase.from('branches').insert(defaultBranches);
+                }
 
-            // Fetch users
-            let { data: usersData } = await supabase.from('users').select('*');
-            if (usersData && usersData.length) {
-                users = usersData;
-            } else {
-                users = defaultUsers;
-                await supabase.from('users').insert(defaultUsers);
-            }
+                // Fetch users
+                let { data: usersData } = await supabase.from('users').select('*');
+                if (usersData && usersData.length) {
+                    users = usersData;
+                } else {
+                    users = defaultUsers;
+                    await supabase.from('users').insert(defaultUsers);
+                }
 
-            // Fetch documents
-            let { data: docsData } = await supabase.from('documents').select('*');
-            if (docsData && docsData.length) {
-                documents = docsData;
-            } else {
-                documents = defaultDocs;
-                await supabase.from('documents').insert(defaultDocs);
-            }
+                // Fetch documents
+                let { data: docsData } = await supabase.from('documents').select('*');
+                if (docsData && docsData.length) {
+                    documents = docsData;
+                } else {
+                    documents = defaultDocs;
+                    await supabase.from('documents').insert(defaultDocs);
+                }
 
-            // Fetch dynamic forms
-            let { data: formsData } = await supabase.from('dynamic_forms').select('*');
-            if (formsData && formsData.length) {
-                dynamicForms = formsData;
-            } else {
-                dynamicForms = defaultDynamicForms;
-                await supabase.from('dynamic_forms').insert(defaultDynamicForms);
-            }
+                // Fetch dynamic forms
+                let { data: formsData } = await supabase.from('dynamic_forms').select('*');
+                if (formsData && formsData.length) {
+                    dynamicForms = formsData;
+                } else {
+                    dynamicForms = defaultDynamicForms;
+                    await supabase.from('dynamic_forms').insert(defaultDynamicForms);
+                }
 
-            // Fetch file fillers
-            let { data: fillersData } = await supabase.from('file_fillers').select('*');
-            if (fillersData && fillersData.length) {
-                fileFillers = fillersData;
-            } else {
-                fileFillers = defaultFileFillers;
-                await supabase.from('file_fillers').insert(defaultFileFillers);
+                // Fetch file fillers
+                let { data: fillersData } = await supabase.from('file_fillers').select('*');
+                if (fillersData && fillersData.length) {
+                    fileFillers = fillersData;
+                } else {
+                    fileFillers = defaultFileFillers;
+                    await supabase.from('file_fillers').insert(defaultFileFillers);
+                }
+            } catch (error) {
+                console.error("خطأ في تحميل البيانات من Supabase:", error);
+                showToast("فشل الاتصال بقاعدة البيانات. تأكد من الإعدادات.", "error");
             }
         }
 
@@ -1480,7 +1484,7 @@ const supabase = supabase.createClient(supabaseUrl, supabaseKey);
                         </div>
 
                         <div class="p-4 bg-slate-50 rounded-xl text-slate-600 text-xs leading-relaxed border border-slate-100/50">
-                            ${doc.desc || "لا توجد ملاحظات إضافية مرفقة مع هذه المعاملة."}
+                            ${doc.description || "لا توجد ملاحظات إضافية مرفقة مع هذه المعاملة."}
                         </div>
 
                         <div class="flex flex-wrap gap-2 justify-between items-center pt-3 border-t border-slate-100 text-xs text-slate-500">
@@ -1548,7 +1552,7 @@ const supabase = supabase.createClient(supabaseUrl, supabaseKey);
                 senderId: loggedUser.id,
                 receiverBranchId: target,
                 title: title,
-                desc: desc,
+                description: desc,
                 fileName: fileName,
                 fileType: fileType,
                 timestamp: new Date().toISOString(),
@@ -2327,7 +2331,6 @@ const supabase = supabase.createClient(supabaseUrl, supabaseKey);
             }
 
             if (id) {
-                // Update existing user
                 const userData = {
                     name, title, branchId, role, username, passwordHash: password, phone, whatsapp
                 };
@@ -2348,7 +2351,6 @@ const supabase = supabase.createClient(supabaseUrl, supabaseKey);
                 }
                 showToast("تم تحديث الحساب وتعديل صلاحياته والفرع بنجاح.", "success");
             } else {
-                // Create new user
                 const newUser = {
                     id: "u_" + Date.now(),
                     name, title, branchId, role, username, passwordHash: password, avatar: "", phone, whatsapp
